@@ -23,6 +23,16 @@ npm run dev          # http://localhost:4173 — connect your wallet, pick your 
 `npm ci` installs the SDK from the release archive in `vendor/`
 ([v0.1.2 release](https://github.com/spokesz/friendsdk/releases/tag/v0.1.2)).
 
+### Wallet-free demo
+
+```sh
+npm run demo         # http://localhost:4174 — pick any recruit-pool Friend, no wallet
+```
+
+An unofficial demo for people without an eligible Friend. It mounts the same game component outside the SDK
+runtime, so it skips the ownership check and lets you play as any Friend in the recruit-pool snapshot. Everything
+is simulated as usual and resets on reload. The official preview keeps the wallet gate.
+
 ## Build and host
 
 ```sh
@@ -31,6 +41,11 @@ npm run build        # static site in game/.friendsdk/
 
 Upload the **contents** of `game/.friendsdk/` to any HTTPS static host, such as the root of a `gh-pages` branch
 with an empty `.nojekyll`. Keep relative paths and the sandbox document's CSP.
+
+`npm run build:demo` (after `npm run build`) adds the wallet-free demo in `game/.friendsdk/demo/`.
+`.github/workflows/pages.yml` builds both on every push to `main` and publishes them to GitHub Pages:
+[official preview](https://kaigani.github.io/real-frenemies/) (wallet required) and
+[demo](https://kaigani.github.io/real-frenemies/demo/) (no wallet).
 
 ## Checks
 
@@ -64,6 +79,7 @@ Art review: `node scripts/art-sheet.mjs` renders one board per Scenery to `artif
 | `game/src/economy.ts`, `session.ts` | Simulated RF ledger, settlement, pot, round clock and leaderboard, day loop |
 | `game/src/friends.ts`, `onchain.ts`, `data/pool.json` | Traits, live chain reads, recruit-pool snapshot |
 | `game/src/render/` | Pixel painter, 3 × 5 font, terrain tiles |
+| `demo/` | Wallet-free demo page: Friend picker plus a stub action client (built by `scripts/build-demo.mjs`) |
 
 ## Assets
 

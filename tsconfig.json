@@ -14,5 +14,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["game/**/*.ts", "game/**/*.tsx", "tests/**/*.ts", "game/styles.d.ts"]
+  "include": ["game/**/*.ts", "game/**/*.tsx", "tests/**/*.ts", "demo/**/*.tsx", "game/styles.d.ts"]
 }

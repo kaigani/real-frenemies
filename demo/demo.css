@@ -1,0 +1,18 @@
+*{box-sizing:border-box}
+html,body{margin:0;background:#eee;color:#000;font:13px/1.4 ui-monospace,monospace}
+#root{max-width:960px;margin:auto}
+.demo-bar{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:8px 12px;background:#ccff00;border-bottom:2px solid #000}
+.demo-bar span{flex:1 1 320px}
+.demo-bar a{color:#000}
+.demo-bar button,.demo-picker button{font:inherit;color:#000;background:#fff;border:1px solid #000;padding:4px 10px;cursor:pointer}
+.demo-frame{position:relative;width:100%;aspect-ratio:3/2;background:#fff;border:1px solid #000;border-top:0}
+.demo-picker{position:absolute;inset:0;overflow:auto;padding:16px}
+.demo-picker h1{margin:0 0 8px;font-size:18px}
+.demo-picker p{margin:0 0 12px;max-width:60ch}
+.demo-picker .demo-random{background:#ccff00;border-width:2px;margin-bottom:12px}
+.demo-picker ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.demo-picker li button{width:100%;display:grid;grid-template-columns:32px 1fr;grid-template-rows:auto auto;column-gap:8px;text-align:left;padding:4px 6px}
+.demo-picker canvas{grid-row:span 2;width:32px;height:32px;image-rendering:pixelated}
+.demo-picker small{color:#555}
+.demo-picker button:hover,.demo-picker button:focus-visible{background:#ccff00}
+@media (max-width:640px){.demo-frame{aspect-ratio:4/3}}
