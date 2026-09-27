@@ -1,0 +1,4 @@
+/* Narrow screens: a 4:3 frame leaves a band under the 3:2 canvas for the runtime's wallet toolbar and menu button. */
+@media (max-width: 640px) {
+  :root { --rf-game-aspect-ratio: 4 / 3; }
+}

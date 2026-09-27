@@ -1,0 +1,7 @@
+.rf-game{position:absolute;inset:0;overflow:hidden;background:#fff;color:#000;font:12px/1.4 monospace}
+.rf-game canvas{position:absolute;display:block;outline:none;touch-action:none;image-rendering:crisp-edges;image-rendering:pixelated;-webkit-user-select:none;user-select:none}
+.rf-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+.rf-sr:focus-within{clip:auto;clip-path:none;width:auto;height:auto;margin:0;top:4px;right:4px;z-index:3;display:flex;gap:4px;background:#fff;border:1px solid #000;padding:4px}
+.rf-sr button{font:inherit;border:1px solid #000;background:#fff;color:#000;padding:2px 6px}
+.rf-overlay{position:absolute;inset:0;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;padding:24px;text-align:center;text-transform:uppercase;background:#fff}
+.rf-overlay button{font:inherit;border:2px solid #000;background:#ccff00;color:#000;padding:6px 14px;cursor:pointer}
