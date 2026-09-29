@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "friendsdk dev ./game",
-    "build": "friendsdk build ./game",
+    "build": "node scripts/build-site.mjs",
     "build:demo": "node scripts/build-demo.mjs",
     "demo": "node scripts/build-demo.mjs --serve",
     "check": "friendsdk check ./game",
@@ -17,7 +17,8 @@
     "test:browser": "friendsdk test ./game --screenshot ./artifacts/game.png",
     "typecheck": "tsc -p tsconfig.json",
     "pool": "node scripts/build-pool.mjs",
-    "test:play": "node tests/browser/playthrough.mjs"
+    "test:play": "node tests/browser/playthrough.mjs",
+    "test:tactics": "node tests/browser/tactics.mjs"
   },
   "dependencies": {
     "@rarefriends/friendsdk": "file:vendor/rarefriends-friendsdk-0.1.2.tgz",

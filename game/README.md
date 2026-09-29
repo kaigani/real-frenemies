@@ -1,5 +1,30 @@
 # Real Frenemies
 
+The default game is now **The Lantern Road**, a four-chapter turn-based campaign. The selected Friend leads a squad
+of three with equal combat stats for all token identities. Campaign play uses no RF. Each friend moves once and
+then attacks, uses its class skill, or guards. Enemy attacks lock onto visible squares; moving away avoids them,
+killing the attacker cancels them, and a shoved enemy can take the hit. Attacks require forecast confirmation.
+Undo resets the current player turn; Retry restarts the current mission. There are no random hit rolls.
+
+Chapters: defeat the scouts; hold a signal for two consecutive nights; defend the lantern for six nights; defeat
+the Hollow King and hold the final signal for one night. Keep the lantern and at least one friend alive. Warden
+Shove deals 1 base damage and pushes one tile (water: KO, collision: +2); Ranger Pierce trades movement for +1
+damage and ignores forest armor; Mender heals 3 HP at range 2. Forest costs 2 movement and reduces damage by 1;
+Guard reduces damage by 2 until the next player turn; a shrine heals 1 HP per night. Damage always deals at least 1.
+Cliffs block movement and shots; units and forest do not block shots. Allies block movement. Enemy damage can hit
+either team. New reinforcements arrive on the warned tile or an adjacent free tile if it is occupied.
+
+Controls: **1/2/3**, arrows, Enter; **A** attack, **S** skill, **G** guard, **E** end, **U** undo, **R** retry,
+**H** help, **L** last enemy turn report, **M** mute. The ending and results offer chapter selection; best medals
+are retained when replaying within the same session. Phones include 44-pixel command buttons, a direction pad,
+and readable status/forecast text. Sappers in chapter three hunt the lantern directly with range-2 firebombs
+for 4 damage; neither passing nor guarding can protect the objective. All primary controls also support pointer input. Tab traverses canvas controls without
+trapping focus. Sound and reduced-motion controls have real button mirrors for assistive technology. Progress
+resets on reload; medals last for the current run only.
+
+The original simulation remains on the title screen's **Territory Mode** button. The following sections document
+that mode. Its native 319 × 212 canvas now shares the four-tone LCD palette (#182c24, #617b52, #a6ba76, #dbe7ad).
+
 FriendSDK **v0.1.2** game. Your selected Rare Friend is the Core of a pixel-art territory generated from its token.
 You garrison it with recruited Friends, stake simulated RF on each piece, expand into new regions, raid rival
 territories and defend against a nightly raid. Beat a rival and you can buy one of its flags and move in; every
@@ -145,6 +170,6 @@ If it is in the pool snapshot (as the SDK test fixture #7730 is), the snapshot i
 
 Native canvas **319 × 212**, scaled by the largest whole number that fits in device pixels (3× = 957 × 636 in the
 SDK frame's 958 × 638 inner area), with `image-rendering: pixelated` and no smoothing. Everything is drawn as whole
-pixels: the canonical 1-bit sprites at 16 × 16, a hand-made 3 × 5 bitmap font, and a locked 4-colour palette (black,
-white, lime #ccff00, pink #ff3b6b) with ordered dither. On narrow screens `host.css` switches the frame to 4:3 so
-the runtime toolbar sits below the canvas.
+pixels: the canonical 1-bit sprites at 16 × 16, a hand-made 3 × 5 bitmap font, and a locked 4-colour palette (
+light #dbe7ad, mid #a6ba76, shade #617b52, dark #182c24) with ordered dither. On narrow screens `host.css` provides
+extra height for the touch command deck and runtime toolbar below the canvas.

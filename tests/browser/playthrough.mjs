@@ -54,7 +54,11 @@ await testGame("./game", {
       assert.equal(bad, 0, `${label}: ${bad} blocks are not solid ${scale}×${scale}`);
     };
 
+    await until("The Lantern Road");
+    await game.getByRole("button", { name: "Territory mode (resets campaign)" }).focus();
+    await page.keyboard.press("Enter");
     await until("Base loaded");
+    await canvas.focus();
     await shot("01-help");
     await pixelCheck("help");
     await tap(132, 190); // START BUILDING

@@ -1,5 +1,23 @@
 # Real Frenemies
 
+**The Lantern Road** is now the default: a four-chapter, directly controlled turn-based tactics campaign in a
+four-tone handheld palette. Command a Warden, Ranger and Mender; dodge locked enemy attacks, shove foes into water,
+protect the lantern and reclaim the signal. Your selected Rare Friend plays the Warden with its canonical sprite.
+The original territory simulation is available from **Territory Mode** on the title screen.
+
+Run `npm run demo` and open **http://localhost:4174/** to play without a wallet. The demo starts with Friend #7730;
+use the header's Friend button to choose another. Campaign stats are equal across Friends. Progress is session-only.
+
+Campaign controls: click a friend and a dotted tile to move; **A** attack, **S** skill, **G** guard; select a target
+twice to review and confirm the forecast. **1/2/3** select squad members, arrows + Enter target a tile, **E** ends the
+turn, **U** resets the current turn, **R** retries a mission, **H** opens the guide, **L** reviews the last enemy turn
+and **M** toggles sound. Phones have large touch commands and a directional pad. Attacking
+ends that friend's movement. Ranger Pierce requires standing still. Each mission awards victory, no-loss and par
+medals, with chapter selection and best medals retained within the session. `npm run test:tactics` (with the demo running) plays all four chapters through public browser controls;
+append `-- 360` for a phone-width pass. `npm test` also proves legal, no-loss solutions for every chapter.
+
+The territory-mode documentation below describes the separate original simulation.
+
 A tower-defense-meets-raid game for the [Rare Friends Vibeathon](https://github.com/spokesz/rarefriends-vibeathon),
 built on [FriendSDK v0.1.2](https://github.com/spokesz/friendsdk). Your Rare Friend is the Core of a territory
 generated from its token; recruited Friends garrison it, you expand into new regions, raid rival territories, buy

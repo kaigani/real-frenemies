@@ -2,7 +2,7 @@
 import { BIG_H, BIG_W, bigGlyph, bigWidth } from "./bigfont.ts";
 import { CHAR_W, glyph, LINE_H, textWidth } from "./font.ts";
 
-export const PALETTE = { black: "#000000", white: "#ffffff", lime: "#ccff00", pink: "#ff3b6b" } as const;
+export const PALETTE = { black: "#182c24", white: "#dbe7ad", lime: "#a6ba76", pink: "#617b52" } as const;
 export type Color = keyof typeof PALETTE;
 /** Dither density: 1 = 25%, 2 = 50%, 3 = 75% of pixels in the colour. */
 export type Density = 1 | 2 | 3;

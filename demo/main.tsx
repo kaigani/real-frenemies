@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { GameClient } from "@rarefriends/friendsdk/game";
 import RealFrenemies from "../game/index.tsx";
@@ -49,7 +49,7 @@ function Picker({ onPick }: { onPick: (friend: Friend) => void }) {
 function Demo() {
   const [friend, setFriend] = useState<Friend | null>(() => {
     const id = new URLSearchParams(location.search).get("friend");
-    return PLAYABLE.find(f => String(f.tokenId) === id) ?? null;
+    return PLAYABLE.find(f => String(f.tokenId) === (id ?? "7730")) ?? PLAYABLE[0];
   });
   const pick = (f: Friend | null) => {
     const url = new URL(location.href);
@@ -57,18 +57,24 @@ function Demo() {
     history.replaceState(null, "", url);
     setFriend(f);
   };
+  const client = useMemo(() => friend ? stubClient(friend.tokenId) : null, [friend]);
   return <>
     <header className="demo-bar">
-      <strong>Real Frenemies · unofficial demo</strong>
-      <span>No wallet: this skips the Friend ownership check. The <a href="../">official preview</a> needs a wallet
-        holding a Generations Friend.</span>
-      {friend && <button type="button" onClick={() => pick(null)}>Change Friend</button>}
+      <a className="demo-brand" href="./">RF<span>RARE FRIENDS PRESENTS</span></a>
+      <nav aria-label="Demo navigation"><span className="demo-edition">TACTICAL ADVENTURE / VOL. 01</span>
+      {friend && <button type="button" onClick={() => pick(null)}>Friend #{String(friend.tokenId)} ↗</button>}</nav>
     </header>
-    <main className="demo-frame">
+    <div className="demo-intro"><div><p className="demo-eyebrow">A LITTLE WORLD. A BETTER PLAN.</p><h1>The Lantern Road<span>Real Frenemies</span></h1></div><p>Three friends. Four chapters.<br />Bring the light back, one turn at a time.</p></div>
+    <main className="demo-console">
+    <div className="demo-screen-label"><span><i /> DOT MATRIX WITH FRIENDS</span><span>RF — 001</span></div>
+    <div className="demo-frame">
       {friend
-        ? <RealFrenemies key={String(friend.tokenId)} friendId={friend.tokenId} client={stubClient(friend.tokenId)} paused={false} />
+        ? <RealFrenemies key={String(friend.tokenId)} friendId={friend.tokenId} client={client!} paused={false} />
         : <Picker onPick={pick} />}
+    </div>
+    <div className="demo-console-foot"><strong>REAL FRIENDS<span> / POCKET TACTICS</span></strong><span className="demo-speaker" aria-hidden="true">▰ ▰ ▰ ▰ ▰</span></div>
     </main>
+    <footer className="demo-footer"><p><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Select <span>·</span> <kbd>↑←↓→</kbd> Aim <span>·</span> <kbd>Enter</kbd> Confirm <span>·</span> <kbd>U</kbd> Undo <span>·</span> <kbd>H</kbd> Help</p><p>Free demo · No wallet needed · Progress resets on reload.<br />Original Rare Friends sprites. All territory balances are simulated. <a href="../">Wallet preview ↗</a></p></footer>
   </>;
 }
 
