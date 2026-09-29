@@ -1,4 +1,5 @@
-/* Narrow screens reserve space for large touch commands below the native canvas and for the runtime toolbar. */
+:root { --rf-game-aspect-ratio: 4 / 3; }
+/* Narrow screens reserve space for large touch commands below the HD canvas and for the runtime toolbar. */
 @media (max-width: 640px) {
-  :root { --rf-game-aspect-ratio: 319 / 460; }
+  :root { --rf-game-aspect-ratio: 319 / 500; }
 }

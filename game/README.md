@@ -1,7 +1,7 @@
 # Real Frenemies
 
-The default game is now **The Lantern Road**, a four-chapter turn-based campaign. The selected Friend leads a squad
-of three with equal combat stats for all token identities. Campaign play uses no RF. Each friend moves once and
+The default game is now **The Lantern Road**, a four-chapter turn-based campaign. The selected Friend appears on the
+squad banner and as Pip's battlefield icon; Pip, Rook and Moss have equal combat stats for all token identities. Campaign play uses no RF. Each friend moves once and
 then attacks, uses its class skill, or guards. Enemy attacks lock onto visible squares; moving away avoids them,
 killing the attacker cancels them, and a shoved enemy can take the hit. Attacks require forecast confirmation.
 Undo resets the current player turn; Retry restarts the current mission. There are no random hit rolls.
@@ -168,8 +168,14 @@ If it is in the pool snapshot (as the SDK test fixture #7730 is), the snapshot i
 
 ## Rendering
 
-Native canvas **319 × 212**, scaled by the largest whole number that fits in device pixels (3× = 957 × 636 in the
-SDK frame's 958 × 638 inner area), with `image-rendering: pixelated` and no smoothing. Everything is drawn as whole
-pixels: the canonical 1-bit sprites at 16 × 16, a hand-made 3 × 5 bitmap font, and a locked 4-colour palette (
-light #dbe7ad, mid #a6ba76, shade #617b52, dark #182c24) with ordered dither. On narrow screens `host.css` provides
-extra height for the touch command deck and runtime toolbar below the canvas.
+The campaign uses a **640 × 480** native canvas, **40 × 40** battlefield tiles, **94-pixel dialogue portraits** and
+**162-pixel briefing illustrations**. Battlefield units use the original **16 × 16** Rare Friend icons at integer 2× scale,
+including their idle animation; detailed character artwork is reserved for portraits and narrative presentation.
+Generated character and terrain atlases are palette-locked and embedded as
+data URLs so they remain readable inside the SDK's opaque-origin sandbox. Native sprite caches are sampled once,
+quantized, then drawn without smoothing; CSS uses `image-rendering: pixelated` to fit desktop and phone displays.
+The four original colors remain light #dbe7ad, mid #a6ba76, shade #617b52 and dark #182c24.
+See [asset prompts](assets/lantern/PROMPTS.md) for source provenance and repacking instructions.
+
+Territory mode retains its **319 × 212** native canvas, canonical **16 × 16** sprites and whole-device-pixel scaling.
+On narrow screens the campaign reserves extra height for readable status text and a 44-pixel touch command deck.

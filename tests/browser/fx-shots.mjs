@@ -5,13 +5,14 @@ await mkdir("./artifacts/fx", { recursive: true });
 await testGame("./game", { timeout: 30_000, check: async ({ page, game }) => {
   const canvas = game.locator("canvas");
   await canvas.waitFor();
-  const scale = (await canvas.boundingBox()).width / 319;
+  let scale = 1;
   const tap = (x, y) => canvas.click({ position: { x: (x + 0.5) * scale, y: (y + 0.5) * scale } });
   const status = game.locator("[role=status]");
   await status.filter({ hasText: "The Lantern Road" }).waitFor();
   await game.getByRole("button", { name: "Territory mode (resets campaign)" }).focus();
   await page.keyboard.press("Enter");
   await status.filter({ hasText: "Base loaded" }).waitFor();
+  scale = (await canvas.boundingBox()).width / 319;
   await canvas.focus();
   await tap(299, 5); // FX ON
   await tap(132, 190);

@@ -74,7 +74,7 @@ function Demo() {
     </div>
     <div className="demo-console-foot"><strong>REAL FRIENDS<span> / POCKET TACTICS</span></strong><span className="demo-speaker" aria-hidden="true">▰ ▰ ▰ ▰ ▰</span></div>
     </main>
-    <footer className="demo-footer"><p><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Select <span>·</span> <kbd>↑←↓→</kbd> Aim <span>·</span> <kbd>Enter</kbd> Confirm <span>·</span> <kbd>U</kbd> Undo <span>·</span> <kbd>H</kbd> Help</p><p>Free demo · No wallet needed · Progress resets on reload.<br />Original Rare Friends sprites. All territory balances are simulated. <a href="../">Wallet preview ↗</a></p></footer>
+    <footer className="demo-footer"><p><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Select <span>·</span> <kbd>↑←↓→</kbd> Aim <span>·</span> <kbd>Enter</kbd> Confirm <span>·</span> <kbd>U</kbd> Undo <span>·</span> <kbd>H</kbd> Help</p><p>Free demo · No wallet needed · Progress resets on reload.<br />Rare Friends / The Lantern Road. All territory balances are simulated. <a href="../">Wallet preview ↗</a></p></footer>
   </>;
 }
 

@@ -2,7 +2,9 @@
 
 **The Lantern Road** is now the default: a four-chapter, directly controlled turn-based tactics campaign in a
 four-tone handheld palette. Command a Warden, Ranger and Mender; dodge locked enemy attacks, shove foes into water,
-protect the lantern and reclaim the signal. Your selected Rare Friend plays the Warden with its canonical sprite.
+protect the lantern and reclaim the signal. Your selected Rare Friend appears on the squad banner and leads the battlefield as Pip.
+Battlefield units use chunky canonical Rare Friend icons; detailed illustrated characters appear in the portraits and narrative callouts.
+The campaign renders at 640 × 480 with detailed 40-pixel terrain, six illustrated characters, and large narrative portraits.
 The original territory simulation is available from **Territory Mode** on the title screen.
 
 Run `npm run demo` and open **http://localhost:4174/** to play without a wallet. The demo starts with Friend #7730;
@@ -101,9 +103,13 @@ Art review: `node scripts/art-sheet.mjs` renders one board per Scenery to `artif
 
 ## Assets
 
-All artwork is drawn in code at runtime. Character sprites are the canonical on-chain Generations frames, via the
-SDK sprite registry and the pool snapshot; the SDK's artwork notice covers them. The font, tiles and effects are
-original to this project. Sound cues are the SDK's procedural sound kit. No third-party assets.
+Campaign characters and terrain were created with the built-in imagegen tool, then packed into the original four-color
+LCD palette. Source atlases and the full prompt set are in [game/assets/lantern](game/assets/lantern/PROMPTS.md).
+Run `npm run art:pack` after changing the source atlases (requires Playwright Chromium). The committed data-URL pack
+works inside the SDK sandbox without image network requests or cross-origin canvas access.
+The battlefield icons, squad banner and territory mode use canonical on-chain Generations sprites through the SDK registry and pool
+snapshot; the SDK's artwork notice covers those sprites. Bitmap fonts, UI, territory tiles and effects are drawn in code.
+Sound cues use the SDK's procedural sound kit.
 
 ## License
 

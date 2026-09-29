@@ -17,14 +17,15 @@ try {
   const input = async (key, label) => mobile ? touch.getByRole("button", { name: label, exact: true }).click() : page.keyboard.press(key);
   await status.filter({ hasText: "The Lantern Road" }).waitFor();
   const shot = async name => { await page.waitForTimeout(40); await page.screenshot({ path: `${out}/${name}.png`, fullPage: true }); };
-  const tap = async (x, y) => { const box = await canvas.boundingBox(); await canvas.click({ position: { x: x * box.width / 319, y: y * box.height / 212 } }); await page.waitForTimeout(20); };
-  const tile = async p => tap(8 + p.x * 16 + 8, 33 + p.y * 16 + 8);
+  const tap = async (x, y) => { const box = await canvas.boundingBox(); await canvas.click({ position: { x: x * box.width / 640, y: y * box.height / 480 } }); await page.waitForTimeout(20); };
+  const tile = async p => tap(8 + p.x * 40 + 20, 24 + p.y * 40 + 20);
   await shot("01-title");
   const palette = await canvas.evaluate(c => { const data = c.getContext("2d").getImageData(0, 0, c.width, c.height).data; const colors = new Set(); for (let i = 0; i < data.length; i += 4) colors.add(`${data[i]},${data[i+1]},${data[i+2]}`); return [...colors]; });
-  assert.equal(palette.length, 4, "exactly four native LCD colors");
+  assert.deepEqual(palette.sort(), ["24,44,36", "219,231,173", "166,186,118", "97,123,82"].sort(), "generated art uses exactly the original four LCD colors");
+  assert.deepEqual(await canvas.evaluate(c => [c.width, c.height]), [640, 480], "campaign renders at the new native resolution");
   await canvas.focus(); await input("Enter", "Start adventure"); await page.waitForTimeout(30);
   for (let mission = 0; mission < 4; mission++) {
-    await shot(`chapter-${mission + 1}-brief`); if (mobile) await input("Enter", "Continue"); else await tap(100, 187);
+    await shot(`chapter-${mission + 1}-brief`); if (mobile) await input("Enter", "Continue"); else await tap(323, 445);
     let model = createBattle(mission);
     if (mission === 0) {
       if (mobile) {
@@ -53,7 +54,7 @@ try {
         if (model.result === "won") break;
       }
       if (model.result !== "won") {
-        if (mobile) await input("e", "End turn"); else await tap(260, 156); endTurn(model);
+        if (mobile) await input("e", "End turn"); else await tap(563, 334); endTurn(model);
         await page.waitForTimeout(330);
       }
       if (turn === 0) await shot(`chapter-${mission + 1}-battle`);
@@ -61,10 +62,10 @@ try {
     }
     await status.filter({ hasText: "Mission complete" }).waitFor();
     await shot(`chapter-${mission + 1}-victory`);
-    if (mobile) await input("Enter", "Continue"); else await tap(90, 187);
+    if (mobile) await input("Enter", "Continue"); else await tap(188, 281);
   }
   await shot("ending");
-  if (mobile) await input("Enter", "Continue"); else await tap(159, 186);
+  if (mobile) await input("Enter", "Continue"); else await tap(320, 315);
   await shot("chapters");
   await status.filter({ hasText: "4 chapters unlocked" }).waitFor();
   assert.equal(await page.locator("body").evaluate(el => el.scrollWidth > innerWidth), false, "no horizontal page overflow");

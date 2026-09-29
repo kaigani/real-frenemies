@@ -17,6 +17,7 @@
     "test:browser": "friendsdk test ./game --screenshot ./artifacts/game.png",
     "typecheck": "tsc -p tsconfig.json",
     "pool": "node scripts/build-pool.mjs",
+    "art:pack": "node scripts/pack-lantern-art.mjs",
     "test:play": "node tests/browser/playthrough.mjs",
     "test:tactics": "node tests/browser/tactics.mjs"
   },

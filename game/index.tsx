@@ -5,6 +5,7 @@ import type { GameComponentProps } from "@rarefriends/friendsdk/runtime";
 import { createFriendSoundKit } from "@rarefriends/friendsdk/sounds";
 import { App, NATIVE_H, NATIVE_W } from "./src/app.ts";
 import { TacticsApp } from "./src/tactics-app.ts";
+import { TACTICS_W, TACTICS_H } from "./src/tactics-view.ts";
 import "./style.css";
 
 type View = { muted: boolean; reducedMotion: boolean; screen: string };
@@ -15,6 +16,8 @@ export default function RealFrenemies({ friendId, client, paused }: GameComponen
   const canvas = useRef<HTMLCanvasElement>(null);
   const app = useRef<App | TacticsApp | null>(null);
   const [mode, setMode] = useState<"campaign" | "territory">("campaign");
+  const nativeWidth = mode === "campaign" ? TACTICS_W : NATIVE_W;
+  const nativeHeight = mode === "campaign" ? TACTICS_H : NATIVE_H;
   const [status, setStatus] = useState("Loading Real Frenemies…");
   const [view, setView] = useState<View>({ muted: true, reducedMotion: false, screen: "loading" });
   const [error, setError] = useState<string | null>(null);
@@ -46,14 +49,16 @@ export default function RealFrenemies({ friendId, client, paused }: GameComponen
 
   useEffect(() => { app.current?.setPaused(paused); }, [paused, view.screen]);
 
-  // Whole-number scale in device pixels, so every native pixel is an exact square block. Offsets are whole too.
+  // The HD campaign fits the 4:3 display with nearest-neighbor CSS scaling; the legacy canvas keeps integer scaling.
   useEffect(() => {
     const box = wrap.current!, c = canvas.current!;
     const fit = () => {
       const dpr = window.devicePixelRatio || 1;
       const w = Math.round(box.clientWidth * dpr), h = Math.round(box.clientHeight * dpr);
-      const scale = Math.max(1, Math.floor(Math.min(w / NATIVE_W, h / NATIVE_H)));
-      const cw = NATIVE_W * scale, ch = NATIVE_H * scale;
+      const deckHeight = mode === "campaign" && box.clientWidth <= 640 ? 245 * dpr : 0;
+      const fitScale = Math.min(w / nativeWidth, (h - deckHeight) / nativeHeight);
+      const scale = mode === "campaign" ? Math.max(.25, fitScale) : Math.max(1, Math.floor(fitScale));
+      const cw = Math.round(nativeWidth * scale), ch = Math.round(nativeHeight * scale);
       c.style.width = `${cw / dpr}px`;
       c.style.height = `${ch / dpr}px`;
       box.style.setProperty("--rf-canvas-height", `${ch / dpr}px`);
@@ -67,17 +72,17 @@ export default function RealFrenemies({ friendId, client, paused }: GameComponen
     observer.observe(box);
     window.addEventListener("resize", fit);
     return () => { observer.disconnect(); window.removeEventListener("resize", fit); };
-  }, []);
+  }, [mode, nativeWidth, nativeHeight]);
 
   const toNative = (event: PointerEvent<HTMLCanvasElement>) => {
     const r = event.currentTarget.getBoundingClientRect();
-    return [(event.clientX - r.left) * NATIVE_W / r.width, (event.clientY - r.top) * NATIVE_H / r.height] as const;
+    return [(event.clientX - r.left) * nativeWidth / r.width, (event.clientY - r.top) * nativeHeight / r.height] as const;
   };
   const touchKey = (key: string) => { if (!paused) app.current?.key(new KeyboardEvent("keydown", { key })); };
   const battle = view.screen === "tactics-battle";
 
   return <section className="rf-game" aria-label="Real Frenemies" ref={wrap}>
-    <canvas ref={canvas} width={NATIVE_W} height={NATIVE_H} tabIndex={0} role="application"
+    <canvas ref={canvas} width={nativeWidth} height={nativeHeight} tabIndex={0} role="application"
       aria-label={mode === "campaign" ? "The Lantern Road. Turn-based battlefield. 1, 2, 3 select friends. Arrows move cursor; Enter selects. A attacks; S skill; G guard; E end turn; U undo; H help." : "Real Frenemies territory board. Tab moves between controls, Enter selects, arrows move the cursor, H opens help."}
       aria-busy={view.screen === "loading" || view.screen === "tactics-loading"}
       onPointerDown={event => {

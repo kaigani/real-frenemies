@@ -18,9 +18,7 @@ await testGame("./game", {
   check: async ({ page, game }) => {
     const canvas = game.locator("canvas");
     await canvas.waitFor();
-    const box = await canvas.boundingBox();
-    const scale = box.width / 319;
-    assert.equal(scale, Math.floor(scale), `canvas scale ${scale} must be a whole number`);
+    let scale = 1;
     const status = game.locator("[role=status]");
     const shot = async name => { await page.waitForTimeout(150); await page.locator(".rf-game-frame").screenshot({ path: `${out}/${name}.png` }); };
     const tap = async (x, y) => canvas.click({ position: { x: (x + 0.5) * scale, y: (y + 0.5) * scale } });
@@ -58,6 +56,8 @@ await testGame("./game", {
     await game.getByRole("button", { name: "Territory mode (resets campaign)" }).focus();
     await page.keyboard.press("Enter");
     await until("Base loaded");
+    scale = (await canvas.boundingBox()).width / 319;
+    assert.equal(scale, Math.floor(scale), `territory canvas scale ${scale} must be a whole number`);
     await canvas.focus();
     await shot("01-help");
     await pixelCheck("help");
