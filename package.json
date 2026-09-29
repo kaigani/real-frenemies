@@ -8,7 +8,7 @@
     "node": ">=22.18.0"
   },
   "scripts": {
-    "dev": "friendsdk dev ./game",
+    "dev": "node scripts/dev-site.mjs",
     "build": "node scripts/build-site.mjs",
     "build:demo": "node scripts/build-demo.mjs",
     "demo": "node scripts/build-demo.mjs --serve",
@@ -19,6 +19,7 @@
     "pool": "node scripts/build-pool.mjs",
     "art:pack": "node scripts/pack-lantern-art.mjs",
     "test:play": "node tests/browser/playthrough.mjs",
+    "test:setup": "node tests/browser/setup.mjs",
     "test:tactics": "node tests/browser/tactics.mjs"
   },
   "dependencies": {

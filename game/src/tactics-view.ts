@@ -61,9 +61,10 @@ export class TacticsView {
     const step = this.reducedMotion || unit.acted ? 0 : Math.floor(this.tick / 260);
     const bits = spriteBits(friend, "down", false, step), scale = Math.max(1, Math.floor((size - 4) / 16));
     const px = x + Math.floor((size - 16 * scale) / 2), py = y + size - 4 - 16 * scale;
-    // Keep the original 16px icon's chunky integer pixels, with a pale silhouette rim over detailed terrain.
-    for (const [dx, dy] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) this.p.sprite(bits, px + dx, py + dy, "white", { scale });
-    this.p.sprite(bits, px, py, unit.acted ? "pink" : "black", { scale });
+    // Inverse enemy silhouettes distinguish teams while keeping the canonical chunky pixels.
+    const enemy = unit.team === "enemy", outline = enemy ? "black" : "white";
+    for (const [dx, dy] of [[-2, 0], [2, 0], [0, -2], [0, 2], [-2, -2], [2, -2], [-2, 2], [2, 2]]) this.p.sprite(bits, px + dx, py + dy, outline, { scale });
+    this.p.sprite(bits, px, py, enemy ? "white" : unit.acted ? "pink" : "black", { scale });
   }
   private scenery(index: number, x: number, y: number, size: number, cutout = true) { this.art.draw(this.p.ctx, "terrain", index, x, y, size, cutout); }
   private road(s: Battle, x: number, y: number) {
@@ -145,8 +146,9 @@ export class TacticsView {
     for (const key of moves.keys()) {
       const [x, y] = key.split(",").map(Number); if (at(s, { x, y })) continue;
       const px = MAP_X + x * MAP_TILE, py = MAP_Y + y * MAP_TILE;
-      for (const [dx, dy] of [[2, 2], [34, 2], [2, 34], [34, 34]]) { p.rect(px + dx, py + dy, 4, 1, "pink"); p.rect(px + dx, py + dy, 1, 4, "pink"); }
-      p.rect(px + 18, py + 18, 3, 3, "lime");
+      // A solid center dot with a light backing stays legible on roads and dense forest tiles.
+      p.rect(px + 16, py + 16, 8, 8, "white");
+      p.rect(px + 18, py + 17, 4, 6, "black"); p.rect(px + 17, py + 18, 6, 4, "black");
     }
     for (const wave of MISSIONS[s.mission].waves.filter(w => w.turn === s.turn + 1)) { const x = MAP_X + wave.x * 40, y = MAP_Y + wave.y * 40; p.frame(x + 4, y + 4, 32, 32, "black"); this.center("!", x + 20, y + 10, "black", 2); }
     for (const intent of s.intents) {
@@ -157,7 +159,7 @@ export class TacticsView {
     }
     for (const unit of living(s)) {
       const x = MAP_X + unit.x * 40, y = MAP_Y + unit.y * 40, selected = unit.id === u?.id, enemy = unit.team === "enemy";
-      // Team bases and command pips carry team/action information without recoloring the art.
+      // Team bases and command pips reinforce the inverse enemy silhouettes.
       p.rect(x + 6, y + 31, 28, 5, enemy ? "black" : "white"); p.frame(x + 6, y + 31, 28, 5, "black");
       this.fieldSprite(unit, v.commander, x, y - 2, 40);
       if (enemy && unit.role === "archer") this.text("A", x + 31, y + 2, "black");

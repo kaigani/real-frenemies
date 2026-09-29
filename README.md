@@ -43,6 +43,12 @@ npm run dev          # http://localhost:4173 — connect your wallet, pick your 
 `npm ci` installs the SDK from the release archive in `vendor/`
 ([v0.1.2 release](https://github.com/spokesz/friendsdk/releases/tag/v0.1.2)).
 
+The wallet game has a themed Connect → Choose → Play setup, canonical Friend cards, network switching,
+loading progress, and a verified Friend-number recovery option. The trusted host queries owner-filtered
+transfer history in five-million-block windows, respecting the public RPC's range limit. It preserves the SDK's
+balance/history checks and freshly verifies ownership before launching the sandbox. It never scans all tokens.
+After editing the wallet host or game, run `npm run build` and refresh the running dev server.
+
 ### Wallet-free demo
 
 ```sh
@@ -72,6 +78,7 @@ with an empty `.nojekyll`. Keep relative paths and the sandbox document's CSP.
 ```sh
 npm test                               # unit tests: sim determinism, bases, stats, settlement, session day loop
 npm run typecheck
+npm run test:setup                     # after npm run build: wallet setup, RPC paging, recovery and sandbox at desktop/phone sizes
 npm run check                          # friendsdk check: definition, imports, sandbox boundary
 npx playwright install chromium        # once
 npm run test:browser                   # friendsdk test: SDK smoke test with mock wallet/RPC
@@ -100,6 +107,7 @@ Art review: `node scripts/art-sheet.mjs` renders one board per Scenery to `artif
 | `game/src/friends.ts`, `onchain.ts`, `data/pool.json` | Traits, live chain reads, recruit-pool snapshot |
 | `game/src/render/` | Pixel painter, 3 × 5 font, terrain tiles |
 | `demo/` | Wallet-free demo page: Friend picker plus a stub action client (built by `scripts/build-demo.mjs`) |
+| `host/` | Trusted wallet setup, canonical Friend cards and bounded owner-history discovery; uses the SDK eligibility gate and sandbox |
 
 ## Assets
 
