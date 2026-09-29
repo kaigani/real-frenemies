@@ -23,7 +23,8 @@ trapping focus. Sound and reduced-motion controls have real button mirrors for a
 resets on reload; medals last for the current run only.
 
 The original simulation remains on the title screen's **Territory Mode** button. The following sections document
-that mode. Its native 319 × 212 canvas now shares the four-tone LCD palette (#182c24, #617b52, #a6ba76, #dbe7ad).
+that mode. Its native 640 × 480 canvas shares the campaign's four-tone LCD palette (#182c24, #617b52, #a6ba76, #dbe7ad),
+detailed terrain, illustrated commander callouts and bitmap letterforms.
 
 FriendSDK **v0.1.2** game. Your selected Rare Friend is the Core of a pixel-art territory generated from its token.
 You garrison it with recruited Friends, stake simulated RF on each piece, expand into new regions, raid rival
@@ -177,5 +178,7 @@ quantized, then drawn without smoothing; CSS uses `image-rendering: pixelated` t
 The four original colors remain light #dbe7ad, mid #a6ba76, shade #617b52 and dark #182c24.
 See [asset prompts](assets/lantern/PROMPTS.md) for source provenance and repacking instructions.
 
-Territory mode retains its **319 × 212** native canvas, canonical **16 × 16** sprites and whole-device-pixel scaling.
-On narrow screens the campaign reserves extra height for readable status text and a 44-pixel touch command deck.
+Versus territory mode also renders at **640 × 480**, with **32 × 32** terrain tiles across all eight scenery types.
+Canonical **16 × 16** Friend sprites are drawn at 2×; enemies use pale fills and dark outlines. Scouting maps reuse
+the detailed terrain, and a framed commander portrait supplies contextual instructions below the battlefield.
+Both modes reserve extra height on narrow screens for readable status text and a **44-pixel touch command deck**.

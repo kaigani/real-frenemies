@@ -49,15 +49,15 @@ export default function RealFrenemies({ friendId, client, paused }: GameComponen
 
   useEffect(() => { app.current?.setPaused(paused); }, [paused, view.screen]);
 
-  // The HD campaign fits the 4:3 display with nearest-neighbor CSS scaling; the legacy canvas keeps integer scaling.
+  // Both modes share the HD display and reserve a readable touch command deck on narrow screens.
   useEffect(() => {
     const box = wrap.current!, c = canvas.current!;
     const fit = () => {
       const dpr = window.devicePixelRatio || 1;
       const w = Math.round(box.clientWidth * dpr), h = Math.round(box.clientHeight * dpr);
-      const deckHeight = mode === "campaign" && box.clientWidth <= 640 ? 245 * dpr : 0;
+      const deckHeight = box.clientWidth <= 640 ? 245 * dpr : 0;
       const fitScale = Math.min(w / nativeWidth, (h - deckHeight) / nativeHeight);
-      const scale = mode === "campaign" ? Math.max(.25, fitScale) : Math.max(1, Math.floor(fitScale));
+      const scale = Math.max(.25, fitScale);
       const cw = Math.round(nativeWidth * scale), ch = Math.round(nativeHeight * scale);
       c.style.width = `${cw / dpr}px`;
       c.style.height = `${ch / dpr}px`;
@@ -78,7 +78,7 @@ export default function RealFrenemies({ friendId, client, paused }: GameComponen
     const r = event.currentTarget.getBoundingClientRect();
     return [(event.clientX - r.left) * nativeWidth / r.width, (event.clientY - r.top) * nativeHeight / r.height] as const;
   };
-  const touchKey = (key: string) => { if (!paused) app.current?.key(new KeyboardEvent("keydown", { key })); };
+  const touchKey = (key: string) => { if (!paused) app.current?.key(new KeyboardEvent("keydown", { key: key === "ShiftTab" ? "Tab" : key, shiftKey: key === "ShiftTab" })); };
   const battle = view.screen === "tactics-battle";
 
   return <section className="rf-game" aria-label="Real Frenemies" ref={wrap}>
@@ -99,6 +99,13 @@ export default function RealFrenemies({ friendId, client, paused }: GameComponen
       <button type="button" disabled={paused} onClick={() => setMode(mode === "campaign" ? "territory" : "campaign")}>{mode === "campaign" ? "Territory mode (resets campaign)" : "Campaign mode (resets territory)"}</button>
     </div>
     <p className="rf-sr" role="status" aria-live="polite">{status}</p>
+    {mode === "territory" && <div className="rf-touch" aria-label="Versus command deck">
+      <p className="rf-touch-summary">{app.current instanceof App ? app.current.summary() : "Preparing your territory"}</p>
+      <p className="rf-touch-status">{status}</p>
+      <div className="rf-touch-row">{[["ShiftTab", "Previous"], ["Tab", "Next control"], ["Enter", "Select"], ["Escape", "Back"], ["h", "Help"]].map(([key, label]) => <button key={key} disabled={paused} type="button" onClick={() => touchKey(key)}>{label}</button>)}</div>
+      <div className="rf-touch-row">{[["ArrowLeft", "←", "Cursor left"], ["ArrowUp", "↑", "Cursor up"], ["ArrowDown", "↓", "Cursor down"], ["ArrowRight", "→", "Cursor right"]].map(([key, label, name]) => <button key={key} aria-label={name} disabled={paused} type="button" onClick={() => touchKey(key)}>{label}</button>)}</div>
+      <div className="rf-touch-row">{(view.screen === "playback" ? [[" ", "Pause / play"], ["f", "Speed"], ["Escape", "Results"]] : view.screen === "build" ? [["r", "Raid"], ["e", "Defend"], ["t", "Territory"], ["o", "Standings"]] : [["m", "Sound"], ["Enter", "Confirm"]]).map(([key, label]) => <button key={key} disabled={paused} type="button" onClick={() => touchKey(key)}>{label}</button>)}</div>
+    </div>}
     {mode === "campaign" && <div className="rf-touch" aria-label="Touch command deck">
       <p className="rf-touch-summary">{app.current instanceof TacticsApp ? app.current.summary() : "Waking the forest…"}</p>
       <p className="rf-touch-status">{status}</p>

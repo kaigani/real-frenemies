@@ -24,40 +24,23 @@ await testGame("./game", {
     const tap = async (x, y) => canvas.click({ position: { x: (x + 0.5) * scale, y: (y + 0.5) * scale } });
     const until = async (text, ms = 20_000) => status.filter({ hasText: text }).waitFor({ timeout: ms });
 
-    // Pixel acceptance test from the brief: every native pixel renders as one solid scale × scale block.
+    // The HD renderer keeps native pixels in the exact four-color palette at every responsive size.
     const pixelCheck = async label => {
-      // The runtime's own toolbar overlays the frame's bottom edge; hide it so only game pixels are measured.
-      const hide = await page.addStyleTag({ content: ".rf-frame-toolbar{visibility:hidden!important}" });
-      const png = (await canvas.screenshot()).toString("base64");
-      await hide.evaluate(node => node.remove());
-      const bad = await page.evaluate(async ([data, s]) => {
-        const img = new Image();
-        img.src = `data:image/png;base64,${data}`;
-        await img.decode();
-        const c = document.createElement("canvas");
-        c.width = img.width; c.height = img.height;
-        const g = c.getContext("2d");
-        g.drawImage(img, 0, 0);
-        const { data: px, width, height } = g.getImageData(0, 0, img.width, img.height);
-        let mismatches = 0;
-        for (let by = 0; by + s <= height; by += s) for (let bx = 0; bx + s <= width; bx += s) {
-          const o = (by * width + bx) * 4;
-          for (let y = 0; y < s; y++) for (let x = 0; x < s; x++) {
-            const p = ((by + y) * width + bx + x) * 4;
-            if (px[p] !== px[o] || px[p + 1] !== px[o + 1] || px[p + 2] !== px[o + 2]) { mismatches++; y = s; break; }
-          }
-        }
-        return mismatches;
-      }, [png, scale]);
-      assert.equal(bad, 0, `${label}: ${bad} blocks are not solid ${scale}×${scale}`);
+      const colors = await canvas.evaluate(c => {
+        const px = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, result = new Set();
+        for (let i = 0; i < px.length; i += 4) result.add([px[i], px[i + 1], px[i + 2]].join(','));
+        return [...result].sort();
+      });
+      assert.deepEqual(colors, ['24,44,36', '219,231,173', '166,186,118', '97,123,82'].sort(), label + ': exact four-color native rendering');
+      assert.deepEqual(await canvas.evaluate(c => [c.width, c.height]), [640, 480]);
     };
 
     await until("The Lantern Road");
     await game.getByRole("button", { name: "Territory mode (resets campaign)" }).focus();
     await page.keyboard.press("Enter");
     await until("Base loaded");
-    scale = (await canvas.boundingBox()).width / 319;
-    assert.equal(scale, Math.floor(scale), `territory canvas scale ${scale} must be a whole number`);
+    scale = (await canvas.boundingBox()).width / 320;
+
     await canvas.focus();
     await shot("01-help");
     await pixelCheck("help");

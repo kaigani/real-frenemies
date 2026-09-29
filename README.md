@@ -5,7 +5,9 @@ four-tone handheld palette. Command a Warden, Ranger and Mender; dodge locked en
 protect the lantern and reclaim the signal. Your selected Rare Friend appears on the squad banner and leads the battlefield as Pip.
 Battlefield units use chunky canonical Rare Friend icons; detailed illustrated characters appear in the portraits and narrative callouts.
 The campaign renders at 640 × 480 with detailed 40-pixel terrain, six illustrated characters, and large narrative portraits.
-The original territory simulation is available from **Territory Mode** on the title screen.
+The versus territory simulation is available from **Territory Mode** on the title screen. It shares the 640 × 480
+display, detailed terrain across all eight scenery types, illustrated commander callouts, and chunky Friend icons.
+Rivals use pale sprites with dark outlines; phones have a dedicated versus command deck.
 
 Run `npm run demo` and open **http://localhost:4174/** to play without a wallet. The demo starts with Friend #7730;
 use the header's Friend button to choose another. Campaign stats are equal across Friends. Progress is session-only.
@@ -82,7 +84,7 @@ npm run test:setup                     # after npm run build: wallet setup, RPC 
 npm run check                          # friendsdk check: definition, imports, sandbox boundary
 npx playwright install chromium        # once
 npm run test:browser                   # friendsdk test: SDK smoke test with mock wallet/RPC
-npm run test:play                      # full day loop by pointer + keyboard, pixel test at 3x (960 px)
+npm run test:play                      # full day loop by pointer + keyboard, native palette/resolution check
 npm run test:play -- 360               # same on a phone-width frame
 ```
 
@@ -105,7 +107,7 @@ Art review: `node scripts/art-sheet.mjs` renders one board per Scenery to `artif
 | `game/src/territory.ts`, `campaign.ts`, `ghosts.ts` | Regions, flags and holders; multi-region raids; persistent AI rivals |
 | `game/src/economy.ts`, `session.ts` | Simulated RF ledger, settlement, pot, round clock and leaderboard, day loop |
 | `game/src/friends.ts`, `onchain.ts`, `data/pool.json` | Traits, live chain reads, recruit-pool snapshot |
-| `game/src/render/` | Pixel painter, 3 × 5 font, terrain tiles |
+| `game/src/render/` | Pixel painters, bitmap fonts, shared art atlas and detailed versus terrain |
 | `demo/` | Wallet-free demo page: Friend picker plus a stub action client (built by `scripts/build-demo.mjs`) |
 | `host/` | Trusted wallet setup, canonical Friend cards and bounded owner-history discovery; uses the SDK eligibility gate and sandbox |
 

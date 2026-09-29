@@ -1,6 +1,6 @@
 /**
- * Real Frenemies canvas app. Draws everything at a native 319 × 212 and lets CSS scale it by a whole number with
- * nearest-neighbour sampling. All game UI is on the canvas; the React adapter only adds accessible mirrors.
+ * Real Frenemies versus renderer. Native-detail 640 × 480 art, a logical UI grid and chunky canonical icons.
+ * The React adapter supplies accessible mirrors and a responsive touch command deck.
  */
 import { feeFor, formatRf, rf, stakeAt } from "./economy.ts";
 import { friendLabel, POOL, POOL_SOURCE, spriteBits, type Facing, type Friend } from "./friends.ts";
@@ -14,14 +14,17 @@ import type { SimEvent } from "./sim.ts";
 import { buildable, tileAt, WALL_HP, type Board } from "./terrain.ts";
 import { garrisoned, regionKey, regionName, YOU, type Piece, type Region, type Territory } from "./territory.ts";
 import { Painter, type Color } from "./render/draw.ts";
+import { VersusPainter } from "./render/versus-painter.ts";
 import { LINE_H, textWidth, wrap } from "./render/font.ts";
 import { bigWidth } from "./render/bigfont.ts";
-import { drawTile, TILE, TILE_NAMES } from "./render/tiles.ts";
+import { TILE, TILE_NAMES } from "./render/tiles.ts";
+import { VersusArt } from "./render/versus-art.ts";
 import { Ui, type Widget } from "./ui.ts";
 
-/** 319 × 212 at 3× is 957 × 636, the largest whole-number fit inside the SDK frame's 958 × 638 inner area. */
-export const NATIVE_W = 319;
-export const NATIVE_H = 212;
+/** Both game modes share the native display; versus UI coordinates are doubled while drawing. */
+export const NATIVE_W = 640;
+export const NATIVE_H = 480;
+const LOGICAL_W = 320, LOGICAL_H = 240;
 /** Simulated opening balance: enough for one expansion (250 RF) plus a garrison. */
 export const START_BALANCE = rf(500);
 const BX = 4, BY = 14;
@@ -59,6 +62,7 @@ type Screen =
 
 export class App {
   private readonly p: Painter;
+  private readonly art: VersusArt;
   private readonly ui = new Ui();
   private readonly host: AppHost;
   private session: Session | null = null;
@@ -79,7 +83,8 @@ export class App {
   private lastImpact = 0;
 
   constructor(ctx: CanvasRenderingContext2D, host: AppHost) {
-    this.p = new Painter(ctx);
+    this.p = new VersusPainter(ctx);
+    this.art = new VersusArt(ctx);
     this.host = host;
   }
 
@@ -104,7 +109,7 @@ export class App {
     const token = ++this.loadToken;
     this.go({ kind: "loading" });
     try {
-      const [player, block] = await Promise.all([readFriend(this.host.friendId), readBlockNumber()]);
+      const [player, block] = await Promise.all([readFriend(this.host.friendId), readBlockNumber(), this.art.load()]);
       if (token !== this.loadToken) return;
       if (player.generation < 1) throw new Error("This Friend is Temporary (generation 0) and can't anchor a base.");
       this.session = new Session(player, POOL, START_BALANCE, block ?? 0);
@@ -145,8 +150,11 @@ export class App {
 
   pointer(x: number, y: number) {
     if (this.paused) return;
-    this.ui.press(Math.floor(x), Math.floor(y));
+    this.ui.press(Math.floor(x / 2), Math.floor(y / 2));
+    this.emitState();
   }
+
+  summary() { return this.session ? `VERSUS / DAY ${this.session.day} / ${formatRf(this.session.ledger.balance)} SIM RF` : "PREPARING YOUR TERRITORY"; }
 
   key(event: KeyboardEvent): boolean {
     if (this.paused) return false;
@@ -388,8 +396,10 @@ export class App {
 
   private render() {
     const p = this.p;
+    p.ctx.save(); p.ctx.scale(2, 2);
     this.ui.begin();
-    p.rect(0, 0, NATIVE_W, NATIVE_H, "white");
+    p.rect(0, 0, LOGICAL_W, LOGICAL_H, "white");
+    if (["build", "setup", "playback", "result", "incoming"].includes(this.screen.kind)) p.rect(199, 12, 120, 133, "lime");
     this.drawTopBar();
     switch (this.screen.kind) {
       case "loading": this.drawCenterMessage("READING YOUR FRIEND ON CHAIN…", "Traits, sprite and block height from Robinhood mainnet"); break;
@@ -419,6 +429,29 @@ export class App {
       p.frame(focus.x - 2, focus.y - 2, focus.w + 4, focus.h + 4, "pink");
       p.frame(focus.x - 1, focus.y - 1, focus.w + 2, focus.h + 2, "white");
     }
+    this.drawDispatch();
+    p.ctx.restore();
+  }
+
+  private drawDispatch() {
+    const p = this.p, kind = this.screen.kind;
+    const lines: Record<string, [string, string]> = {
+      build: ["FORTIFY YOUR HOME", "RECRUIT A FRIEND. PLACE THEM. BUILD YOUR DEFENSE."],
+      territory: ["EVERY FLAG COUNTS", "CHOOSE A REGION TO EXPAND, RECLAIM OR REINFORCE."],
+      scout: ["KNOW YOUR RIVAL", "SCOUT THEIR TERRAIN BEFORE YOU COMMIT YOUR SQUAD."],
+      setup: ["MAKE YOUR PLAN", "PICK YOUR RAIDERS, ENTRY LANE AND REGION ORDER."],
+      playback: ["THE RAID IS UNDERWAY", "WATCH THE CLASH. PAUSE OR SEEK TO STUDY THE FIGHT."],
+      result: ["EVERY RAID TEACHES", "REVIEW THE RESULT. PRACTICE THE REMATCH FOR FREE."],
+      incoming: ["HOLD THE LINE", "YOUR GARRISON STANDS AGAINST TONIGHT'S RAIDERS."],
+      morning: ["A NEW DAY", "CHECK YOUR LOSSES. REBUILD. PLAN YOUR NEXT RAID."],
+      round: ["THE RACE FOR THE POT", "WIN RIVAL TERRITORIES TO CLIMB THE STANDINGS."],
+      help: ["WELCOME, COMMANDER", "BUILD BY DAY. DEFEND BY NIGHT. OUTPLAN YOUR RIVALS."],
+    };
+    const copy = lines[kind] ?? ["REAL FRENEMIES", "YOUR FRIEND. YOUR TERRITORY. YOUR NEXT MOVE."];
+    p.panel(3, 214, 312, 23); p.frame(5, 216, 308, 19, "pink");
+    this.art.portrait(kind === "scout" || kind === "setup" ? 1 : kind === "incoming" || kind === "playback" ? 3 : 0, 6, 212, 26);
+    p.rect(34, 217, 1, 17, "black"); p.big(copy[0], 40, 217, "black");
+    p.text(copy[1], 40, 228, "pink");
   }
 
   // ------------------------------------------------------------------ widgets
@@ -426,7 +459,7 @@ export class App {
   private button(id: string, x: number, y: number, w: number, label: string, activate: () => void, opts: { disabled?: boolean; primary?: boolean; h?: number } = {}) {
     const p = this.p, h = opts.h ?? 11;
     const primary = opts.primary && !opts.disabled;
-    p.rect(x + 1, y + 1, w - 2, h - 2, primary ? "lime" : "white");
+    p.rect(x + 1, y + 1, w - 2, h - 2, primary ? "black" : "white");
     if (opts.disabled) {
       p.withClip(x, y, w, h, () => { p.dither(x + 1, y, w - 2, 1, "black", 2); p.dither(x + 1, y + h - 1, w - 2, 1, "black", 2); p.dither(x, y + 1, 1, h - 2, "black", 2); p.dither(x + w - 1, y + 1, 1, h - 2, "black", 2); });
     } else {
@@ -435,13 +468,13 @@ export class App {
       p.rect(x + w, y + 2, 1, h - 2, "black");
       if (primary) p.rect(x + 2, y + 1, w - 4, 1, "white");
     }
-    p.textCenter(label, x + Math.floor(w / 2), y + Math.floor((h - 5) / 2), "black");
+    p.textCenter(label, x + Math.floor(w / 2), y + Math.floor((h - 5) / 2), primary ? "white" : opts.disabled ? "pink" : "black");
     this.ui.add({ id, x, y, w, h, label, disabled: opts.disabled, activate: () => { if (!opts.disabled) activate(); } });
   }
 
   private drawTopBar() {
     const p = this.p, s = this.session;
-    p.rect(0, 0, NATIVE_W, 11, "black");
+    p.rect(0, 0, LOGICAL_W, 11, "black");
     p.text("REAL", 3, 3, "lime");
     p.big("FRENEMIES", 20, 2, "white", { shadow: "pink" });
     if (s) {
@@ -464,17 +497,17 @@ export class App {
 
   private drawCenterMessage(title: string, sub: string) {
     const p = this.p;
-    p.textCenter(title, NATIVE_W / 2, 90, "black");
-    p.textCenter(sub.toUpperCase(), NATIVE_W / 2, 100, "black");
+    p.textCenter(title, LOGICAL_W / 2, 90, "black");
+    p.textCenter(sub.toUpperCase(), LOGICAL_W / 2, 100, "black");
     const n = this.reducedMotion ? 3 : 1 + (this.anim % 3);
-    for (let i = 0; i < 3; i++) p.rect(NATIVE_W / 2 - 8 + i * 6, 112, 4, 4, i < n ? "black" : "white");
+    for (let i = 0; i < 3; i++) p.rect(LOGICAL_W / 2 - 8 + i * 6, 112, 4, 4, i < n ? "black" : "white");
   }
 
   private drawError(message: string) {
     const p = this.p;
-    p.textCenter("COULDN'T LOAD YOUR FRIEND", NATIVE_W / 2, 70, "pink");
+    p.textCenter("COULDN'T LOAD YOUR FRIEND", LOGICAL_W / 2, 70, "pink");
     p.lines(wrap(message.toUpperCase(), 240), 40, 84, "black");
-    this.button("retry", NATIVE_W / 2 - 30, 130, 60, "RETRY", () => void this.load(), { primary: true });
+    this.button("retry", LOGICAL_W / 2 - 30, 130, 60, "RETRY", () => void this.load(), { primary: true });
   }
 
   // ------------------------------------------------------------------ board drawing
@@ -496,7 +529,7 @@ export class App {
       const tile = tileAt(board, x, y);
       const hp = walls?.get(y * GRID_W + x);
       const kind = kindAt(x, y)!;
-      drawTile(p, kind, BX + x * TILE, BY + y * TILE, x, y, { dir: tile.dir, hp: hp ?? tile.hp, maxHp: WALL_HP[tile.kind], frame: this.anim,
+      this.art.tile(kind, BX + x * TILE, BY + y * TILE, x, y, { dir: tile.dir, hp: hp ?? tile.hp, maxHp: WALL_HP[tile.kind], frame: this.anim,
         scenery: board.scenery, same: (dx, dy) => kindAt(x + dx, y + dy) === kind });
       if (spores?.has(y * GRID_W + x)) {
         const sx = BX + x * TILE, sy = BY + y * TILE;
@@ -549,8 +582,8 @@ export class App {
     p.rect(ix + 3, iy + 13, 10, 3, "black");
     p.rect(ix + 2, iy + 14, 12, 1, "black");
     p.rect(ix + 3, iy + 14, 10, 1, team);
-    p.outline(bits, ix, iy, "white");
-    p.sprite(bits, ix, iy, opts.flash ? "pink" : "black");
+    p.outline(bits, ix, iy, team === "pink" ? "black" : "white");
+    p.sprite(bits, ix, iy, opts.flash ? "pink" : team === "pink" ? "white" : "black");
     if (opts.mini !== undefined && opts.mini >= 0) { p.rect(ix + 12, iy, 4, 4, "white"); p.rect(ix + 13, iy + 1, 2, 2, team); }
     if (opts.core) {
       const cx = ix + 4, cy = iy - 6;
@@ -921,34 +954,9 @@ export class App {
     p.rect(x, y, W, H, "white");
     const kindAt = (tx: number, ty: number) => tx < 0 || ty < 0 || tx >= GRID_W || ty >= GRID_H ? null : tileAt(board, tx, ty).kind;
     for (let ty = 0; ty < GRID_H; ty++) for (let tx = 0; tx < GRID_W; tx++) {
-      const kind = kindAt(tx, ty)!, px = x + tx * t, py = y + ty * t;
-      const same = (dx: number, dy: number) => kindAt(tx + dx, ty + dy) === kind;
-      if (kind === "ground") { if ((tx * 7 + ty * 5) % 3 === 0) p.px(px + 3 + (tx % 3), py + 4, "black"); continue; }
-      if (kind === "water" || kind === "overgrowth") {
-        p.dither(px, py, t, t, "black", kind === "water" ? 1 : 1);
-        if (kind === "water") {
-          if (!same(0, -1)) p.rect(px, py, t, 1, "black");
-          if (!same(0, 1)) p.rect(px, py + t - 1, t, 1, "black");
-          if (!same(-1, 0)) p.rect(px, py, 1, t, "black");
-          if (!same(1, 0)) p.rect(px + t - 1, py, 1, t, "black");
-        } else { p.px(px + 2, py + 3, "black"); p.px(px + 3, py + 4, "black"); p.px(px + 4, py + 3, "black"); }
-      } else if (kind === "conveyor" || kind === "zerog") {
-        p.rect(px, py, t, t, "black");
-        if (kind === "zerog") { p.px(px + 2, py + 2, "white"); p.px(px + 5, py + 5, "white"); }
-        else p.rect(px + 3, py + 3, 2, 2, "white");
-      } else if (kind === "library") {
-        p.rect(px, py + 3, t, 1, "black"); p.rect(px, py + 7, t, 1, "black");
-        for (let i = 1; i < t; i += 2) { p.px(px + i, py + 2, "black"); p.px(px + i, py + 6, "black"); }
-        if (!same(-1, 0)) p.rect(px, py, 1, t, "black");
-        if (!same(1, 0)) p.rect(px + t - 1, py, 1, t, "black");
-      } else if (kind === "stall") {
-        p.rect(px + 1, py + 1, 6, 6, "black"); p.rect(px + 2, py + 2, 4, 1, "white"); p.rect(px + 2, py + 4, 4, 2, "white");
-      } else if (kind === "crystal") {
-        p.rect(px + 3, py + 1, 2, 1, "black"); p.rect(px + 2, py + 2, 4, 4, "black"); p.rect(px + 3, py + 6, 2, 1, "black"); p.px(px + 3, py + 3, "white");
-      } else if (kind === "ledge") {
-        for (let i = 0; i < 5; i++) p.px(px + i, py + ((i * 3) % t), "black");
-        p.rect(px + t - 2, py, 2, t, "black");
-      }
+      const tile = tileAt(board, tx, ty), kind = tile.kind;
+      this.art.tile(kind, x + tx * t, y + ty * t, tx, ty, { scenery: board.scenery, dir: tile.dir, hp: tile.hp, maxHp: WALL_HP[kind], frame: 0,
+        same: (dx, dy) => kindAt(tx + dx, ty + dy) === kind }, t);
     }
     for (const g of garrison) {
       const gx = x + g.x * t, gy = y + g.y * t;
@@ -1385,45 +1393,44 @@ export class App {
 
   // ------------------------------------------------------------------ help
 
-  /** Title card: the logo, your Friend at 3x on its island, two rival ghosts at 2x. Returns the y where text may start. */
+  /** Illustrated versus title card with canonical Friend icons. Returns the y where help text may start. */
   private drawCover(s: Session) {
-    const p = this.p, cx = Math.floor(NATIVE_W / 2);
-    const step = this.reducedMotion ? 0 : Math.floor(this.now / 200);
-    p.bigCenter("REAL FRENEMIES", cx, BY + 14, "black", { shadow: "pink" });
-    p.textCenter("A RARE FRIENDS RAID GAME · ALL RF SIMULATED", cx, BY + 24, "black");
-    const island = (x: number, y: number, w: number, team: Color) => {
-      p.rect(x + 2, y, w - 4, 1, "black"); p.rect(x, y + 1, w, 4, "black"); p.rect(x + 1, y + 1, w - 2, 3, "white");
-      p.rect(x + 2, y + 2, w - 4, 1, team);
-      p.rect(x + 2, y + 5, w - 4, 2, "black");
-      for (let i = x + 4; i < x + w - 3; i += 4) p.px(i, y + 5, "white");
-    };
-    const bob = this.reducedMotion ? 0 : [0, 0, -1, -1][step % 4];
-    const hero = spriteBits(s.player, "down", false, step);
-    island(cx - 30, BY + 86, 60, "lime");
-    p.sprite(hero, cx - 24, BY + 38 + bob, "black", { scale: 3 });
-    [[0, 58, "right"], [2, NATIVE_W - 94, "left"]].forEach(([i, x, facing]) => {
-      const ghost = s.rivals[i as number];
-      island((x as number) - 6, BY + 78, 44, "pink");
-      p.sprite(spriteBits(ghost.core, facing as "left" | "right", false, step + (i as number)), x as number, BY + 46, "black", { scale: 2 });
+    const p = this.p, cx = LOGICAL_W / 2, board = s.home().board;
+    p.withClip(5, BY + 12, 309, 98, () => {
+      for (let y = 0; y < 7; y++) for (let x = 0; x < 20; x++) {
+        const tile = tileAt(board, x % GRID_W, y % GRID_H);
+        this.art.tile(tile.kind, 5 + x * 16, BY + 12 + y * 16, x, y, { scenery: board.scenery, dir: tile.dir, frame: this.anim });
+      }
     });
-    p.big("VS", 102, BY + 62, "pink");
-    p.big("VS", NATIVE_W - 114, BY + 62, "pink");
-    p.textCenter(`#${s.player.tokenId} · ${s.player.character.toUpperCase()} · YOUR CORE`, cx, BY + 96, "black");
-    return BY + 108;
+    p.panel(29, BY + 15, 262, 25);
+    p.bigCenter("REAL FRENEMIES / VERSUS", cx, BY + 20, "black");
+    p.textCenter("BUILD YOUR HOME. RAID YOUR RIVALS.", cx, BY + 31, "pink");
+    this.art.scenery(4, 18, BY + 56, 42); this.art.scenery(3, 263, BY + 57, 42);
+    const step = this.reducedMotion ? 0 : Math.floor(this.now / 200);
+    p.panel(cx - 28, BY + 46, 56, 56, "lime");
+    p.sprite(spriteBits(s.player, "down", false, step), cx - 24, BY + 50, "black", { scale: 3 });
+    for (const [i, x] of [[0, 68], [2, 218]]) {
+      p.panel(x - 3, BY + 55, 38, 39, "black");
+      p.sprite(spriteBits(s.rivals[i].core, "down", false, step), x, BY + 58, "white", { scale: 2 });
+    }
+    p.big("VS", 112, BY + 69, "black"); p.big("VS", 197, BY + 69, "black");
+    p.rect(28, BY + 104, 264, 9, "white");
+    p.textCenter("YOUR FRIEND #" + s.player.tokenId + " / ALL RF SIMULATED", cx, BY + 106, "black");
+    return BY + 119;
   }
 
   private drawHelp(screen: Extract<Screen, { kind: "help" }>) {
     const p = this.p;
     const pages = helpPages(this.session);
     const page = pages[screen.page];
-    p.panel(4, BY - 1, NATIVE_W - 9, BAR_Y - BY - 3);
-    p.rect(5, BY, NATIVE_W - 11, 9, "black");
-    if (bigWidth(page.title) <= NATIVE_W - 40) p.big(page.title, 8, BY + 1, "white"); else p.text(page.title, 8, BY + 2, "white");
-    p.textRight(`${screen.page + 1}/${pages.length}`, NATIVE_W - 10, BY + 2, "lime");
+    p.panel(4, BY - 1, LOGICAL_W - 9, BAR_Y - BY - 3);
+    p.rect(5, BY, LOGICAL_W - 11, 9, "black");
+    if (bigWidth(page.title) <= LOGICAL_W - 40) p.big(page.title, 8, BY + 1, "white"); else p.text(page.title, 8, BY + 2, "white");
+    p.textRight(`${screen.page + 1}/${pages.length}`, LOGICAL_W - 10, BY + 2, "lime");
     let y = BY + 13;
     if (page.cover && this.session) y = this.drawCover(this.session);
     for (const para of page.body) {
-      for (const line of wrap(para.toUpperCase(), NATIVE_W - 16)) { if (y < BAR_Y - 8) p.text(line, 8, y, "black"); y += LINE_H; }
+      for (const line of wrap(para.toUpperCase(), LOGICAL_W - 16)) { if (y < BAR_Y - 8) p.text(line, 8, y, "black"); y += LINE_H; }
       y += 2;
     }
     if (page.kits) {

@@ -12,7 +12,7 @@ await testGame("./game", { timeout: 30_000, check: async ({ page, game }) => {
   await game.getByRole("button", { name: "Territory mode (resets campaign)" }).focus();
   await page.keyboard.press("Enter");
   await status.filter({ hasText: "Base loaded" }).waitFor();
-  scale = (await canvas.boundingBox()).width / 319;
+  scale = (await canvas.boundingBox()).width / 320;
   await canvas.focus();
   await tap(299, 5); // FX ON
   await tap(132, 190);

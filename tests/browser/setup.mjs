@@ -73,6 +73,25 @@ try {
     assert.equal(await page.locator("iframe").getAttribute("sandbox"), "allow-scripts");
     assert.equal(await game.locator("body").evaluate(() => { try { return Boolean(parent.document); } catch { return false; } }), false);
     assert(state.ownerReads >= 2, "Selected Friend receives fresh SDK ownership verification"); await shot("play");
+    await game.getByRole("button", { name: "Territory mode (resets campaign)" }).focus();
+    await page.keyboard.press("Enter");
+    await game.getByRole("status").filter({ hasText: "Base loaded" }).waitFor();
+    const canvas = game.locator("canvas");
+    assert.deepEqual(await canvas.evaluate(c => [c.width, c.height]), [640, 480]);
+    await canvas.focus(); await page.keyboard.press("Escape");
+    await page.waitForTimeout(100); await shot("versus");
+    if (width === 360) {
+      const deck = game.getByLabel("Versus command deck"), bounds = await deck.boundingBox(), gameBounds = await game.locator(".rf-game").boundingBox();
+      assert(bounds.y + bounds.height <= gameBounds.y + gameBounds.height, "Versus touch controls fit inside game");
+      assert((await deck.getByRole("button", { name: "Raid", exact: true }).boundingBox()).height >= 44);
+      await deck.getByRole("button", { name: "Help", exact: true }).click();
+      await deck.getByRole("button", { name: "Confirm", exact: true }).waitFor();
+      await deck.getByRole("button", { name: "Back", exact: true }).click();
+      await deck.getByRole("button", { name: "Raid", exact: true }).waitFor();
+    }
+    await game.getByRole("button", { name: "Campaign mode (resets territory)" }).focus();
+    await page.keyboard.press("Enter");
+    await game.getByRole("status").filter({ hasText: "The Lantern Road" }).waitFor();
     await page.evaluate(other => window.walletTest.accounts([other]), OTHER);
     await page.locator("iframe").waitFor({ state: "detached" });
     await page.getByRole("alert").filter({ hasText: "couldn't finish" }).waitFor();
