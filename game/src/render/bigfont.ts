@@ -1,4 +1,5 @@
-/** 5 × 7 display font for titles, drawn as whole pixels. Advance 6 px, line height 9 px. Uppercase only. */
+/** Shared 5 × 7 campaign font, drawn as whole pixels. Advance 6 px. Uppercase only. */
+import { glyph } from "./font.ts";
 const ROWS: Record<string, readonly string[]> = {
   A: [".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
   B: ["####.", "#...#", "#...#", "####.", "#...#", "#...#", "####."],
@@ -64,7 +65,10 @@ export const BIG_W = 6;
 export const BIG_H = 7;
 
 export function bigGlyph(ch: string) {
-  return masks.get(ch.toUpperCase()) ?? masks.get(" ")!;
+  const known = masks.get(ch.toUpperCase());
+  if (known) return known;
+  // Center uncommon symbols on the same grid, without stretching their pixels.
+  return [0, ...glyph(ch).map(row => row << 1), 0];
 }
 
 export function bigWidth(text: string) {

@@ -1,6 +1,7 @@
 /** 640 x 480 presentation: generated pixel atlases, detailed 40px terrain and illustrated dialogue. */
 import { Atlas, CHARACTER_CELL, SCENERY } from "./render/atlas.ts";
 import { Painter, type Color } from "./render/draw.ts";
+import { campaignBox } from "./render/campaign-style.ts";
 import { POOL, spriteBits, type Character, type Friend } from "./friends.ts";
 import type { Ui } from "./ui.ts";
 import { at, canAct, living, medals, MISSIONS, objective, reachable, ROLES, same, SIGNAL, LANTERN, terrain, turnsUsed, type Action, type Battle, type Point, type Role, type Unit } from "./tactics.ts";
@@ -41,8 +42,7 @@ export class TacticsView {
   private center(text: string, x: number, y: number, color: Color = "black", scale = 1) { this.text(text, x - Math.floor((text.length * 6 - 1) * scale / 2), y, color, scale); }
   private lines(text: string, x: number, y: number, width: number, scale = 1, color: Color = "black", limit = 99) { this.words(text, width, scale).slice(0, limit).forEach((line, i) => this.text(line, x, y + i * (10 * scale), color, scale)); }
   private box(x: number, y: number, w: number, h: number, fill: Color = "white") {
-    const p = this.p; p.rect(x + 2, y + 3, w, h, "black"); p.rect(x, y, w, h, fill); p.notch(x, y, w, h, "black"); p.notch(x + 3, y + 3, w - 6, h - 6, "black");
-    for (const [dx, dy] of [[0, 0], [w - 5, 0], [0, h - 5], [w - 5, h - 5]]) { p.rect(x + dx, y + dy, 5, 5, "black"); p.px(x + dx + 2, y + dy + 2, "white"); }
+    campaignBox(this.p, x, y, w, h, fill);
   }
   private button(id: string, label: string, x: number, y: number, w: number, h = 26, active = false, disabled = false, value?: number) {
     const focus = this.ui.focused(id), p = this.p, dark = active || focus;

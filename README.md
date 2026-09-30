@@ -6,7 +6,8 @@ protect the lantern and reclaim the signal. Your selected Rare Friend appears on
 Battlefield units use chunky canonical Rare Friend icons; detailed illustrated characters appear in the portraits and narrative callouts.
 The campaign renders at 640 × 480 with detailed 40-pixel terrain, six illustrated characters, and large narrative portraits.
 The versus territory simulation is available from **Territory Mode** on the title screen. It shares the 640 × 480
-display, detailed terrain across all eight scenery types, illustrated commander callouts, and chunky Friend icons.
+display, 40-pixel terrain across all eight scenery types, 94-pixel commander callouts, and chunky Friend icons.
+Campaign mode defines both modes' typography, frames, title scenes and command panels through shared rendering code.
 Rivals use pale sprites with dark outlines; phones have a dedicated versus command deck.
 
 Run `npm run demo` and open **http://localhost:4174/** to play without a wallet. The demo starts with Friend #7730;

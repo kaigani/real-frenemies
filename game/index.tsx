@@ -58,9 +58,9 @@ export default function RealFrenemies({ friendId, client, paused }: GameComponen
       const w = Math.floor(bounds.width * dpr), h = Math.floor(bounds.height * dpr);
       const deckHeight = box.clientWidth <= 640 ? 245 * dpr : 0;
       const fitScale = Math.min(w / nativeWidth, (h - deckHeight) / nativeHeight);
-      // Versus letters have 2x2 native pixels. Half-native scale steps therefore map each
-      // font pixel to 1, 2, 3... device pixels, even at fractional browser zoom / Retina DPI.
-      const scale = mode === "territory" && fitScale >= .5 ? Math.floor(fitScale * 2) / 2 : Math.max(.25, fitScale);
+      // Both modes use the same native 5x7 font. Enlarge at whole device-pixel multiples.
+      // Low-DPI phones that cannot fit 640 physical pixels retain the compact overview and touch deck.
+      const scale = fitScale >= 1 ? Math.floor(fitScale) : Math.max(.25, fitScale);
       const cw = Math.round(nativeWidth * scale), ch = Math.round(nativeHeight * scale);
       c.style.width = `${cw / dpr}px`;
       c.style.height = `${ch / dpr}px`;

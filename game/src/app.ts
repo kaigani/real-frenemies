@@ -11,12 +11,12 @@ import { AFFINITY, BLOCKS_PER_DAY, CLAIM_COST, CLASSES, EXPAND_COST, FLOOR_RULES
 import { explain } from "./explain.ts";
 import { routeOf, Session, type Held, type Incoming, type NightReport, type RaidRecord, type Snapshot } from "./session.ts";
 import type { SimEvent } from "./sim.ts";
-import { buildable, tileAt, WALL_HP, type Board } from "./terrain.ts";
+import { buildable, generateBoard, tileAt, WALL_HP, type Board } from "./terrain.ts";
 import { garrisoned, regionKey, regionName, YOU, type Piece, type Region, type Territory } from "./territory.ts";
 import { Painter, type Color } from "./render/draw.ts";
-import { LINE_H, textWidth, wrap } from "./render/font.ts";
+import { CampaignPainter, LINE_H, textWidth, wrap } from "./render/campaign-style.ts";
 import { bigWidth } from "./render/bigfont.ts";
-import { TILE, TILE_NAMES } from "./render/tiles.ts";
+import { TILE_NAMES } from "./render/tiles.ts";
 import { VersusArt } from "./render/versus-art.ts";
 import { Ui, type Widget } from "./ui.ts";
 
@@ -26,11 +26,11 @@ export const NATIVE_H = 480;
 const LOGICAL_W = 320, LOGICAL_H = 240;
 /** Simulated opening balance: enough for one expansion (250 RF) plus a garrison. */
 export const START_BALANCE = rf(500);
-const BX = 4, BY = 14;
-const PX = 200, PY = 14, PW = 116, PH = 128;
-const STRIP_Y = 146;
-const BAR_Y = 185;
-const HINT_Y = 204;
+const TILE = 20, BX = 4, BY = 12;
+const PX = 248, PY = 14, PW = 68, PH = 157;
+const STRIP_Y = 175;
+const BAR_Y = 222;
+const HINT_Y = 215;
 
 export type Cue = "select" | "purchase" | "action-start" | "action-ready" | "anticipation" | "impact" | "reveal-common" | "reveal-rare" | "reward";
 export type AppHost = {
@@ -82,8 +82,7 @@ export class App {
   private lastImpact = 0;
 
   constructor(ctx: CanvasRenderingContext2D, host: AppHost) {
-    // The compact 3x5 font is drawn at exactly 2x with the logical UI, never resampled into a different grid.
-    this.p = new Painter(ctx);
+    this.p = new CampaignPainter(ctx);
     this.art = new VersusArt(ctx);
     this.host = host;
   }
@@ -399,8 +398,8 @@ export class App {
     p.ctx.save(); p.ctx.scale(2, 2);
     this.ui.begin();
     p.rect(0, 0, LOGICAL_W, LOGICAL_H, "white");
-    if (["build", "setup", "playback", "result", "incoming"].includes(this.screen.kind)) p.rect(199, 12, 120, 133, "lime");
     this.drawTopBar();
+    this.drawDispatch();
     switch (this.screen.kind) {
       case "loading": this.drawCenterMessage("READING YOUR FRIEND ON CHAIN…", "Traits, sprite and block height from Robinhood mainnet"); break;
       case "error": this.drawError(this.screen.message); break;
@@ -429,7 +428,8 @@ export class App {
       p.frame(focus.x - 2, focus.y - 2, focus.w + 4, focus.h + 4, "pink");
       p.frame(focus.x - 1, focus.y - 1, focus.w + 2, focus.h + 2, "white");
     }
-    this.drawDispatch();
+    // Public canvas control bounds also describe the current UI to browser checks.
+    p.ctx.canvas.dataset.controls = JSON.stringify(this.ui.widgets.map(({ id, x, y, w, h, disabled }) => ({ id, x: x * 2, y: y * 2, w: w * 2, h: h * 2, disabled })));
     p.ctx.restore();
   }
 
@@ -448,40 +448,41 @@ export class App {
       help: ["WELCOME, COMMANDER", "BUILD BY DAY. DEFEND BY NIGHT. OUTPLAN YOUR RIVALS."],
     };
     const copy = lines[kind] ?? ["REAL FRENEMIES", "YOUR FRIEND. YOUR TERRITORY. YOUR NEXT MOVE."];
-    p.panel(3, 214, 312, 23); p.frame(5, 216, 308, 19, "pink");
-    this.art.portrait(kind === "scout" || kind === "setup" ? 1 : kind === "incoming" || kind === "playback" ? 3 : 0, 6, 212, 26);
-    p.rect(34, 217, 1, 17, "black"); p.big(copy[0], 40, 217, "black");
-    p.text(copy[1], 40, 228, "pink");
+    p.panel(2, 194, 315, 43.5);
+    this.art.portrait(kind === "scout" || kind === "setup" ? 1 : kind === "incoming" || kind === "playback" ? 3 : 0, 4, 193, 47);
+    p.rect(52, 195.5, 1, 40, "black"); p.big(copy[0], 57, 198, "black");
+    p.text(copy[1], 57, 210, "black");
   }
 
   // ------------------------------------------------------------------ widgets
 
   private button(id: string, x: number, y: number, w: number, label: string, activate: () => void, opts: { disabled?: boolean; primary?: boolean; h?: number } = {}) {
-    const p = this.p, h = opts.h ?? 11;
+    if (y === BAR_Y) { x = Math.round(57 + (x - 4) * .82); w = Math.floor(w * .82); }
+    const p = this.p, h = opts.h ?? 13;
     const primary = opts.primary && !opts.disabled;
     p.rect(x + 1, y + 1, w - 2, h - 2, primary ? "black" : "white");
     if (opts.disabled) {
       p.withClip(x, y, w, h, () => { p.dither(x + 1, y, w - 2, 1, "black", 2); p.dither(x + 1, y + h - 1, w - 2, 1, "black", 2); p.dither(x, y + 1, 1, h - 2, "black", 2); p.dither(x + w - 1, y + 1, 1, h - 2, "black", 2); });
     } else {
-      p.notch(x, y, w, h, "black");
+      p.frame(x, y, w, h, "black");
+      p.frame(x + 1, y + 1, w - 2, h - 2, primary ? "lime" : "pink");
       p.rect(x + 2, y + h, w - 2, 1, "black");
       p.rect(x + w, y + 2, 1, h - 2, "black");
       if (primary) p.rect(x + 2, y + 1, w - 4, 1, "white");
     }
-    p.textCenter(label, x + Math.floor(w / 2), y + Math.floor((h - 5) / 2), primary ? "white" : opts.disabled ? "pink" : "black");
+    const ink: Color = primary ? "white" : opts.disabled ? "pink" : "black";
+    if (h >= 13 && bigWidth(label) <= w - 7) p.bigCenter(label, x + w / 2, y + Math.floor((h - 7) / 2), ink);
+    else p.textCenter(label, x + w / 2, y + Math.floor((h - 3.5) / 2), ink);
     this.ui.add({ id, x, y, w, h, label, disabled: opts.disabled, activate: () => { if (!opts.disabled) activate(); } });
   }
 
   private drawTopBar() {
     const p = this.p, s = this.session;
     p.rect(0, 0, LOGICAL_W, 11, "black");
-    p.text("REAL", 3, 3, "lime");
-    p.big("FRENEMIES", 20, 2, "white", { shadow: "pink" });
+    p.big(s ? `VERSUS / DAY ${s.day}` : "RIVAL TERRITORIES", 5, 2, "white");
     if (s) {
-      p.text(`DAY ${s.day}`, 78, 3, "lime");
-      p.text(`SIM RF ${formatRf(s.ledger.balance)}`, 104, 3, "white");
-      p.text(`POT ${formatRf(s.round.pot)}`, 164, 3, "lime");
-      p.text(`BURN ${formatRf(s.ledger.burned)}`, 206, 3, "pink");
+      p.text(`SIM RF ${formatRf(s.ledger.balance)}`, 120, 4, "white");
+      p.text(`POT ${formatRf(s.round.pot)}`, 187, 4, "lime");
     }
     this.smallToggle("sound", 250, this.muted ? "SND OFF" : "SND ON", () => this.setMuted(!this.muted), `Sound ${this.muted ? "off" : "on"}`);
     this.smallToggle("motion", 284, this.reducedMotion ? "FX LOW" : "FX ON", () => this.setReducedMotion(!this.reducedMotion), `Reduced motion ${this.reducedMotion ? "on" : "off"}`);
@@ -530,7 +531,7 @@ export class App {
       const hp = walls?.get(y * GRID_W + x);
       const kind = kindAt(x, y)!;
       this.art.tile(kind, BX + x * TILE, BY + y * TILE, x, y, { dir: tile.dir, hp: hp ?? tile.hp, maxHp: WALL_HP[tile.kind], frame: this.anim,
-        scenery: board.scenery, same: (dx, dy) => kindAt(x + dx, y + dy) === kind });
+        scenery: board.scenery, same: (dx, dy) => kindAt(x + dx, y + dy) === kind }, TILE);
       if (spores?.has(y * GRID_W + x)) {
         const sx = BX + x * TILE, sy = BY + y * TILE;
         for (const [ox, oy] of [[4, 5], [9, 4], [6, 9], [11, 10], [8, 7]]) { p.rect(sx + ox - 1, sy + oy - 1, 3, 3, "white"); p.px(sx + ox, sy + oy, "black"); p.px(sx + ox + 1, sy + oy, "black"); p.px(sx + ox, sy + oy + 1, "black"); }
@@ -541,6 +542,7 @@ export class App {
   /** The flag tile of an expanded region: lime for you, pink for a ghost, dithered when the flag is down. */
   private drawFlag(x: number, y: number, holder: string | null) {
     const p = this.p;
+    x += 2; y += 2;
     p.rect(x + 4, y + 14, 8, 2, "black");
     p.rect(x + 5, y + 13, 6, 1, "black");
     p.rect(x + 7, y + 2, 1, 11, "black");
@@ -555,7 +557,7 @@ export class App {
   private drawLanes(color: Color, active?: number) {
     const p = this.p;
     LANE_ROWS.forEach((row, i) => {
-      const y = BY + row * TILE + 5;
+      const y = BY + row * TILE + 8;
       const on = active === undefined || active === i;
       for (let k = 0; k < 2; k++) {
         const x = BX + 2 + k * 5 + (this.reducedMotion ? 0 : (this.anim % 2));
@@ -570,7 +572,7 @@ export class App {
     const p = this.p;
     const step = this.reducedMotion ? 0 : Math.floor(this.now / (opts.walking ? 90 : 180));
     const bits = spriteBits(friend, opts.facing ?? "down", Boolean(opts.walking), step);
-    const ix = Math.round(x), iy = Math.round(y);
+    const ix = Math.round(x) + 2, iy = Math.round(y) + 2;
     if (opts.dissolve !== undefined) {
       if (opts.dissolve <= 0) return;
       p.withClip(ix, iy, TILE, TILE, () => {
@@ -664,7 +666,7 @@ export class App {
     }
     if (sel?.kind === "recruit") {
       for (let y = 0; y < GRID_H; y++) for (let x = 0; x < GRID_W; x++) {
-        if (buildable(region.board, x, y) && !region.garrison.some(g => g.x === x && g.y === y)) { p.px(BX + x * TILE + 7, BY + y * TILE + 7, "pink"); p.px(BX + x * TILE + 8, BY + y * TILE + 8, "pink"); }
+        if (buildable(region.board, x, y) && !region.garrison.some(g => g.x === x && g.y === y)) p.rect(BX + x * TILE + 9, BY + y * TILE + 9, 2, 2, "pink");
       }
     }
     this.boardWidget("board", (x, y) => this.clickTile(x, y));
@@ -677,21 +679,19 @@ export class App {
     this.button("help", 190, BAR_Y, 30, "HELP", () => this.openHelp());
     if (s.broke) this.button("restart", 224, BAR_Y, 60, "RESTART SIM", () => { s.restart(); this.buildId = `${YOU}/0,0`; this.selection = { kind: "core" }; this.say("Simulated ledger restarted."); });
     const hint = sel?.kind === "recruit" ? "PICK A DOTTED TILE TO PLACE (1 RF)" : sel?.kind === "piece" ? "L LEVEL UP · X REMOVE · TILE TO MOVE" : "[ ] SWITCH REGION · T TERRITORY · O ROUND";
-    p.text(hint, 122, HINT_Y, "black");
+    p.text(hint, 57, HINT_Y, "black");
   }
 
   private drawRoster(held: Held) {
     const s = this.session!, p = this.p;
     const pool = s.pool;
-    const cols = 18;
-    const label = held.rival ? `${regionName(held.region)} AT ${held.rival.name}` : regionName(held.region);
-    p.text(`RECRUIT POOL · ${label}: ${held.region.garrison.length}/${MAX_GARRISON} PIECES · SUPPLY ${s.supply(held.region)}/${SUPPLY_PER_REGION}`, 4, STRIP_Y, "black");
-    const per = cols * 2, pages = Math.max(1, Math.ceil(pool.length / per));
+    const cols = 12;
+    const per = cols, pages = Math.max(1, Math.ceil(pool.length / per));
     this.rosterPage = Math.min(this.rosterPage, pages - 1);
     const first = this.rosterPage * per;
     pool.slice(first, first + per).forEach((friend, j) => {
       const i = first + j;
-      const x = 4 + (j % cols) * 17 + 1, y = STRIP_Y + 6 + Math.floor(j / cols) * 17;
+      const x = 4 + j * 20 + 2, y = STRIP_Y + 2;
       const placed = s.isPlaced(friend);
       const selected = (this.selection?.kind === "recruit" && this.selection.friend.tokenId === friend.tokenId) ||
         (this.selection?.kind === "piece" && this.selection.key === `#${friend.tokenId}`);
@@ -701,8 +701,7 @@ export class App {
       if (selected) p.frame(x - 1, y - 1, 18, 18, "pink");
       if (this.ui.focused("roster") && i === this.rosterIndex) p.frame(x - 1, y - 1, 18, 18, "black");
     });
-    const rows = Math.min(2, Math.ceil((pool.length - first) / cols));
-    if (pages > 1) this.button("roster-page", 290, STRIP_Y - 1, 25, `${this.rosterPage + 1}/${pages} ►`, () => { this.rosterPage = (this.rosterPage + 1) % pages; this.rosterIndex = this.rosterPage * per; }, { h: 8 });
+    if (pages > 1) this.button("roster-page", PX + 3, STRIP_Y + 3, PW - 6, `FRIENDS ${this.rosterPage + 1}/${pages} ►`, () => { this.rosterPage = (this.rosterPage + 1) % pages; this.rosterIndex = this.rosterPage * per; }, { h: 12 });
     const pick = (i: number) => {
       const friend = pool[i];
       if (!friend) return;
@@ -713,8 +712,8 @@ export class App {
       this.host.play("select");
     };
     this.ui.add({
-      id: "roster", x: 4, y: STRIP_Y + 5, w: cols * 17 + 1, h: rows * 17 + 1, label: "Recruit pool",
-      press: (x, y) => pick(first + Math.floor((x - 5) / 17) + Math.floor((y - STRIP_Y - 6) / 17) * cols),
+      id: "roster", x: 4, y: STRIP_Y + 2, w: cols * 20, h: 17, label: "Recruit pool",
+      press: (x) => pick(first + Math.floor((x - 4) / 20)),
       activate: () => pick(this.rosterIndex),
       arrow: (dx, dy) => {
         const next = this.rosterIndex + dx + dy * cols;
@@ -733,36 +732,32 @@ export class App {
     p.rect(PX + 1, PY + 8, PW - 2, 1, "black");
     const ink: Color = color === "black" ? "white" : "black";
     if (bigWidth(title) <= PW - 6) p.big(title, PX + 3, PY + 1, ink);
-    else p.text(title, PX + 3, PY + 2, ink);
+    else p.text(title.length > 20 ? title.slice(0, 18) + ".." : title, PX + 4, PY + 2, ink);
   }
 
   /** Friend card inside the side panel. Returns the next free y. */
   private friendCard(friend: Friend, level: number, boardScenery: Board["scenery"], opts: { core?: boolean; attacking?: boolean; y?: number; atkMul?: number; defMul?: number } = {}) {
-    const p = this.p, y0 = opts.y ?? PY + 10;
+    const p = this.p, y0 = opts.y ?? PY + 12, x = PX + 5;
     const bits = spriteBits(friend, "down", false, this.reducedMotion ? 0 : Math.floor(this.now / 220));
-    p.frame(PX + 3, y0, 34, 34, "black");
-    p.sprite(bits, PX + 4, y0 + 1, "black", { scale: 2 });
-    const tx = PX + 41;
-    p.text(`#${friend.tokenId}`, tx, y0 + 1, "black");
-    p.text(friend.character.toUpperCase(), tx, y0 + 8, "black");
-    p.text(`GEN ${friend.generation} · TIER ${friend.activationTier}`, tx, y0 + 15, "black");
-    p.text(friend.state.toUpperCase(), tx, y0 + 22, "black");
-    if (friend.source === "snapshot" && opts.core) p.text("SNAPSHOT", tx + 32, y0 + 22, "pink");
-    let y = y0 + 37;
-    p.text(`${friend.scenery.toUpperCase()} · ${friend.floor.toUpperCase()}`, PX + 3, y, "black"); y += LINE_H;
-    if (!level) { p.text("NOT ACTIVE", PX + 3, y, "pink"); return y + LINE_H; }
+    p.sprite(bits, x + 13, y0, "black", { scale: 2 });
+    let y = y0 + 34;
+    p.textCenter("#" + friend.tokenId + " / " + friend.character.toUpperCase(), PX + PW / 2, y, "black"); y += 7;
+    p.text("GEN " + friend.generation + " / TIER " + friend.activationTier, x, y, "pink"); y += 9;
+    const put = (text: string, color: Color = "black") => { for (const line of wrap(text.toUpperCase(), PW - 10)) { p.text(line, x, y, color); y += LINE_H; } };
+    put(friend.scenery + " / " + friend.floor, "pink"); y += 3;
+    if (!level) { put("CORE INACTIVE"); return y; }
     const st = unitStats(friend, level, boardScenery, { core: opts.core, attacking: opts.attacking, atkMul: opts.atkMul, defMul: opts.defMul });
+    put("LEVEL " + level + " / HP " + st.maxHp);
+    put("DMG " + st.dmg + " / RANGE " + st.range); y += 4;
     const def = CLASSES[friend.character];
-    p.text(`LV${level} HP ${st.maxHp} DMG ${st.dmg} RNG ${st.range}`, PX + 3, y, "black"); y += LINE_H;
-    p.text(`DEF ${def.defense.name.toUpperCase()}`, PX + 3, y, "black"); y += LINE_H;
-    p.text(`RAID ${def.offense.name.toUpperCase()}`, PX + 3, y, "black"); y += LINE_H;
-    p.text(`MAX ${def.upgrade.name.toUpperCase()}`, PX + 3, y, "black");
-    p.textRight(st.upgrade ? "ON" : "AT LV4", PX + PW - 3, y, st.upgrade ? "black" : "pink");
-    y += LINE_H;
-    const aff = st.slots < 2 ? `GEN ${friend.generation}: NO SCENERY SLOT` : st.affinity ? `AFFINITY ON: ${friend.scenery.toUpperCase()}` : `AFFINITY OFF ON ${boardScenery.toUpperCase()}`;
-    p.text(aff, PX + 3, y, "black"); y += LINE_H;
+    put("DEF / " + def.defense.name);
+    put("RAID / " + def.offense.name);
+    put("LV4 / " + def.upgrade.name, st.upgrade ? "black" : "pink"); y += 3;
+    put(st.slots < 2 ? "NO SCENERY SLOT" : st.affinity ? "SCENERY BONUS ON" : "SCENERY BONUS OFF", "pink");
+    if (opts.core && friend.source === "snapshot") put("SNAPSHOT", "pink");
     return y;
   }
+
 
   private drawBuildPanel(held: Held) {
     const s = this.session!, p = this.p, sel = this.selection, region = held.region;
@@ -784,7 +779,7 @@ export class App {
         const away = s.away.has(piece.key);
         this.panelHeader(away ? "GARRISON · RAIDING" : "GARRISON");
         this.friendCard(piece.friend, piece.level, region.board.scenery, { defMul });
-        p.text(`STAKE ${formatRf(stakeAt(piece.level))} RF`, PX + PW - 48, PY + 10 + 30, "black");
+        p.text(`STAKE ${formatRf(stakeAt(piece.level))} RF`, PX + 5, PY + PH - 34, "pink");
         const cost = s.levelCost(piece.level), error = s.levelUpError(piece.key);
         const label = cost === null ? "MAX LEVEL" : error?.startsWith("No supply") ? "NO SUPPLY LEFT" : `LEVEL UP · ${formatRf(cost)} RF`;
         this.button("lvl", PX + 3, btnY1, PW - 6, label, () => this.levelSelected(), { disabled: Boolean(error) || away, primary: true });
@@ -803,16 +798,18 @@ export class App {
     this.panelHeader(held.rival ? `${regionName(region)} · AT ${held.rival.name}` : `${regionName(region)} · ${region.board.scenery.toUpperCase()}`, held.rival ? "pink" : "black");
     let y = PY + 10;
     p.text(`REGION ${index + 1}/${list.length}`, PX + 3, y, "black");
-    this.button("prev-region", PX + PW - 45, y - 2, 20, "◄", () => this.cycleRegion(-1), { h: 9, disabled: list.length < 2 });
-    this.button("next-region", PX + PW - 23, y - 2, 20, "►", () => this.cycleRegion(1), { h: 9, disabled: list.length < 2 });
-    y += LINE_H + 1;
-    p.text(`SUPPLY ${s.supply(region)}/${SUPPLY_PER_REGION} · ${region.garrison.length}/${MAX_GARRISON} PIECES`, PX + 3, y, "black"); y += LINE_H + 2;
+    this.button("prev-region", PX + PW - 29, y - 2, 11, "◄", () => this.cycleRegion(-1), { h: 9, disabled: list.length < 2 });
+    this.button("next-region", PX + PW - 15, y - 2, 11, "►", () => this.cycleRegion(1), { h: 9, disabled: list.length < 2 });
+    y += 11;
+    p.text(`SUPPLY ${s.supply(region)}/${SUPPLY_PER_REGION}`, PX + 3, y, "black"); y += LINE_H;
+    p.text(`${region.garrison.length}/${MAX_GARRISON} FRIENDS`, PX + 3, y, "black"); y += LINE_H + 2;
     const aff = AFFINITY[region.board.scenery];
     for (const line of wrap(`${region.board.scenery}: ${aff.terrain}`.toUpperCase(), PW - 6)) { p.text(line, PX + 3, y, "black"); y += LINE_H; }
     y += 2;
     const extra = s.extraRegions(YOU), counting = s.bonusRegions(YOU);
-    p.text(`BONUS ×${defMul.toFixed(2)} · ${counting}/${extra} COUNT`, PX + 3, y, "black"); y += LINE_H;
-    if (!region.home && !garrisoned(region)) { p.text(`NEEDS ${GARRISON_FOR_BONUS} PIECES TO COUNT`, PX + 3, y, "pink"); y += LINE_H; }
+    p.text(`BONUS ×${defMul.toFixed(2)}`, PX + 3, y, "black"); y += LINE_H;
+    p.text(`${counting}/${extra} REGIONS COUNT`, PX + 3, y, "black"); y += LINE_H;
+    if (!region.home && !garrisoned(region)) { p.text(`NEEDS ${GARRISON_FOR_BONUS} FRIENDS`, PX + 3, y, "pink"); y += LINE_H; }
     y += 2;
     const tonight = s.incoming();
     const lines = s.isProtected(YOU) ? [`REBUILDING: PROTECTED ${s.protectedNights(YOU)} NIGHT${s.protectedNights(YOU) === 1 ? "" : "S"}`, "RAIDING ENDS PROTECTION"]
@@ -867,7 +864,7 @@ export class App {
         sel.home ? "HOME: NO BONUS, HOLDS YOUR CORE" : garrisoned(sel) ? "BONUS ACTIVE (+15%)" : `BONUS NEEDS ${GARRISON_FOR_BONUS} PIECES HERE`,
         "", ...wrap(`${AFFINITY[sel.board.scenery].terrain}.`.toUpperCase(), PW - 6),
       ];
-      for (const line of lines) { p.text(line, PX + 3, y, "black"); y += LINE_H; }
+      for (const line of lines.flatMap(line => wrap(line, PW - 8))) { p.text(line, PX + 4, y, "black"); y += LINE_H; }
       if (sel.holder === YOU) this.button("build-here", PX + 3, PY + PH - 12, PW - 6, "BUILD HERE ►", () => { this.buildId = `${YOU}/${sel.key}`; this.selection = null; this.go({ kind: "build" }); }, { primary: true });
       else if (sel.holder === null) this.button("reclaim", PX + 3, PY + PH - 12, PW - 6, `RECLAIM · ${RECLAIM_COST} RF`, () => this.tryAction(() => s.reclaim(sel.key), `${regionName(sel)} is yours again.`, "purchase"), { primary: true, disabled: s.ledger.balance < rf(RECLAIM_COST) });
       else {
@@ -886,13 +883,13 @@ export class App {
       const lines = [`${t.regions.length} REGION${t.regions.length === 1 ? "" : "S"} · ${s.held().length - t.regions.filter(r => r.holder === YOU).length} OUTPOST${s.held().length - t.regions.filter(r => r.holder === YOU).length === 1 ? "" : "S"}`,
         `BONUS ×${s.bonus(YOU).toFixed(2)} (${s.bonusRegions(YOU)}/${extra} REGIONS COUNT)`, "",
         ...wrap(`EXPAND FOR ${EXPAND_COST} RF. A RIVAL WHO BEATS YOU CAN BUY A FLAG FOR ${CLAIM_COST} RF AND MOVE IN; EVICT THEM, THEN PAY ${RECLAIM_COST} RF TO GET IT BACK. ALL OF IT FEEDS THE POT.`, PW - 6)];
-      for (const line of lines) { p.text(line, PX + 3, y, "black"); y += LINE_H; }
+      for (const line of lines.flatMap(line => wrap(line, PW - 8))) { p.text(line, PX + 4, y, "black"); y += LINE_H; }
     }
     // Strip: outposts in rival territories.
     const outposts = s.held().filter(h => h.rival);
-    p.text(outposts.length ? "YOUR OUTPOSTS IN RIVAL TERRITORIES" : "NO OUTPOSTS YET: BEAT A RIVAL, THEN BUY ONE OF ITS FLAGS", 4, STRIP_Y, "black");
+    p.text(outposts.length ? "YOUR OUTPOSTS IN RIVAL TERRITORIES" : "NO OUTPOSTS YET: BEAT A RIVAL, THEN BUY ONE OF ITS FLAGS", 4, outposts.length ? 138 : STRIP_Y, "black");
     outposts.slice(0, 4).forEach((h, i) => {
-      const x = 4 + i * 78, y = STRIP_Y + 6;
+      const x = 4 + i * 78, y = 145;
       p.panel(x, y, 76, 30);
       p.rect(x + 1, y + 1, 74, 8, "lime");
       p.text(`${regionName(h.region)}`.slice(0, 9), x + 3, y + 3, "black");
@@ -903,7 +900,7 @@ export class App {
     this.button("back", 4, BAR_Y, 40, "◄ BACK", () => this.go({ kind: "build" }));
     this.button("round", 48, BAR_Y, 58, "ROUND & POT", () => this.go({ kind: "round" }));
     this.button("help", 110, BAR_Y, 30, "HELP", () => this.openHelp());
-    p.text("PICK A CELL · O ROUND · ESC BACK", 122, HINT_Y, "black");
+    p.text("PICK A CELL · O ROUND · ESC BACK", 57, HINT_Y, "black");
   }
 
   // ------------------------------------------------------------------ scout + setup
@@ -941,7 +938,7 @@ export class App {
       this.button(`rival-${i}`, x + 3, y + h - 15, w - 6, shielded ? `REBUILDING · ${n} NIGHT${n === 1 ? "" : "S"}` : "SCOUT & PICK", () => this.toSetup({ kind: "rival", index: i }), { primary: !shielded, disabled: shielded });
     });
     this.button("back", 4, BAR_Y, 40, "◄ BACK", () => this.go({ kind: "build" }));
-    p.text("PICK A BASE TO SEE ITS REGIONS", 122, HINT_Y, "black");
+    p.text("PICK A BASE TO SEE ITS REGIONS", 57, HINT_Y, "black");
   }
 
   /** A half-scale map of a board: simplified terrain, 8 × 8 thumbnails of each piece and the Core, on an island edge. */
@@ -1013,7 +1010,7 @@ export class App {
     if (inspected) {
       this.panelHeader(yours ? "YOUR PIECE" : "RIVAL PIECE", yours ? "lime" : "pink");
       this.friendCard(inspected.friend, inspected.level, region.board.scenery, { defMul: s.bonus(region.holder ?? territory.owner) });
-      p.text(`STAKE ${formatRf(stakeAt(inspected.level))} RF`, PX + PW - 48, PY + 40, "black");
+      p.text(`STAKE ${formatRf(stakeAt(inspected.level))} RF`, PX + 5, PY + PH - 24, "pink");
       this.button("close", PX + 3, PY + PH - 12, PW - 6, "BACK TO RAID PLAN", () => { setup.inspect = null; });
     } else {
       const t = setup.target;
@@ -1026,7 +1023,7 @@ export class App {
         : t.kind === "reclaim" ? [`RESIDENT ${rival?.name ?? "?"}`, `${defenders} DEFENDERS`, `AT STAKE ${formatRf(all.reduce((n, g) => n + stakeAt(g.level), 0n))} RF`, "OWN DAILY RAID · NO WIN SCORED"]
         : [t.snapshot.label.slice(0, 28), `${regions.length} REGION${regions.length === 1 ? "" : "S"} · ${defenders} DEFENDERS`, "AS IT STOOD BEFORE YOUR RAID", "FREE: NO RF, NO SCORE"];
       lines.push("", `PARTY ${setup.picks.length}/${MAX_RAIDERS} · LANE ${setup.lane + 1} · ×${s.bonus(YOU).toFixed(2)}`, practice ? "NO FEE" : `FEE ${formatRf(fee)} RF (2 + 1 EACH)`);
-      for (const line of lines) { p.text(line, PX + 3, y, "black"); y += LINE_H; }
+      for (const line of lines.flatMap(line => wrap(line, PW - 8))) { p.text(line, PX + 4, y, "black"); y += LINE_H; }
       if (regions.length > 1) {
         y += 2;
         p.text("ROUTE", PX + 3, y, "black"); y += LINE_H;
@@ -1037,16 +1034,15 @@ export class App {
         ? (setup.picks.length ? null : "PICK RAIDERS")
         : s.raidError(setup.picks, t.kind === "reclaim" ? "reclaim" : "raid", t.kind === "rival" ? t.index : undefined);
       this.button("launch", PX + 3, PY + PH - 12, PW - 6, error ? "CAN'T LAUNCH" : practice ? "PRACTICE ►" : `LAUNCH · ${formatRf(fee)} RF`, () => this.launch(setup), { primary: true, disabled: Boolean(error) });
-      if (error && !practice) p.text(error.toUpperCase().slice(0, 28), PX + 3, PY + PH - 20, "pink");
+      if (error && !practice) p.text(error.toUpperCase().slice(0, 20), PX + 3, PY + PH - 20, "pink");
     }
     // Party picker in the strip: every piece you hold, 24 per page.
     const pieces = [...s.pieces()].sort((a, b) => b.level - a.level || a.key.localeCompare(b.key));
-    const pages = Math.max(1, Math.ceil(pieces.length / 24));
+    const pages = Math.max(1, Math.ceil(pieces.length / 12));
     setup.page = Math.min(setup.page, pages - 1);
-    const mine = pieces.slice(setup.page * 24, setup.page * 24 + 24);
-    p.text(`YOUR RAID PARTY: UP TO 4 OF YOUR ${pieces.length} PIECES${pages > 1 ? ` · PAGE ${setup.page + 1}/${pages}` : ""}`, 4, STRIP_Y, "black");
+    const mine = pieces.slice(setup.page * 12, setup.page * 12 + 12);
     mine.forEach((g, i) => {
-      const x = 4 + (i % 12) * 26, y = STRIP_Y + 6 + Math.floor(i / 12) * 17;
+      const x = 4 + (i % 12) * 26, y = STRIP_Y + 2;
       const on = setup.picks.includes(g.key);
       const out = !practice && s.away.has(g.key);
       if (on) p.rect(x, y, 25, 16, "lime");
@@ -1067,7 +1063,7 @@ export class App {
     LANE_ROWS.forEach((_, i) => this.button(`lane-${i}`, 48 + i * 34, BAR_Y, 32, `LANE ${i + 1}`, () => { setup.lane = i; }, { primary: setup.lane === i }));
     if (regions.length > 1) {
       this.button("view-prev", 154, BAR_Y, 16, "◄", () => { setup.view = (setup.view + regions.length - 1) % regions.length; setup.inspect = null; });
-      p.text(`${setup.view + 1}.${regionName(region).slice(0, 5)}`, 173, BAR_Y + 3, "black");
+      p.text(`${setup.view + 1}.${regionName(region).slice(0, 5)}`, 196, BAR_Y + 3, "black");
       this.button("view-next", 200, BAR_Y, 16, "►", () => { setup.view = (setup.view + 1) % regions.length; setup.inspect = null; });
       this.button("route-first", 220, BAR_Y, 50, "FIGHT FIRST", () => {
         setup.route = [region.key, ...regions.filter(r => r !== region).map(r => r.key)];
@@ -1075,7 +1071,7 @@ export class App {
         this.host.announce(`Route: ${setup.route.map(k => regionName(regions.find(r => r.key === k)!)).join(", ")}.`);
       }, { disabled: setup.view === 0 });
     }
-    p.text(regions.length > 1 ? "LANE · ROUTE ORDER · THEN LAUNCH" : "PICK A LANE, THEN LAUNCH", 122, HINT_Y, "black");
+    p.text(regions.length > 1 ? "LANE · ROUTE ORDER · THEN LAUNCH" : "PICK A LANE, THEN LAUNCH", 57, HINT_Y, "black");
   }
 
   // ------------------------------------------------------------------ incoming + playback + result
@@ -1131,39 +1127,23 @@ export class App {
     this.boardWidget("board", () => this.togglePlay(s), false);
     const n = record.campaign.battles.length;
     this.panelHeader(`${record.title.replace("GHOST ", "").slice(0, 18)} · ${s.battle + 1}/${n}`, youAttack ? "lime" : "pink");
-    p.text(`${battle.name} · TICK ${String(state.tick).padStart(3, "0")}/${result.ticks}`, PX + 3, PY + 10, "black");
-    p.textRight(`${s.speed}X${s.playing ? "" : " ||"}`, PX + PW - 3, PY + 10, "black");
+    p.text(`TICK ${state.tick}/${result.ticks}`, PX + 4, PY + 12, "pink");
+    p.textRight(`${s.speed}X${s.playing ? "" : " ||"}`, PX + PW - 4, PY + PH - 8, "black");
     const name = (id: number) => {
       if (id < 0) return "TERRAIN";
       const u = result.units[id];
       return u.core ? (team(u.side) === "lime" ? "YOUR CORE" : "RIVAL CORE") : u.friend.character.toUpperCase();
     };
     const feed = result.events.filter(e => e.t <= state.tick).map(e => describe(e, name)).filter((x): x is string => Boolean(x)).slice(-14);
-    let y = PY + 19;
-    for (const line of feed.flatMap(l => wrap(l, PW - 6)).slice(-15)) { p.text(line, PX + 3, y, "black"); y += LINE_H; }
-    const drawTeam = (side: "atk" | "def", row: number, label: string) => {
-      const units = state.units.filter(u => u.unit.side === side);
-      p.text(label, 4, STRIP_Y + row * 19 + 5, "black");
-      units.slice(0, 13).forEach((u, i) => {
-        const x = 34 + i * 21, y = STRIP_Y + row * 19;
-        const bits = spriteBits(u.unit.friend, "down", false, 0);
-        p.sprite(bits, x, y, "black");
-        if (!u.alive) { p.dither(x, y, 16, 16, "white", 3); for (let k = 3; k < 13; k++) { p.px(x + k, y + k, "pink"); p.px(x + 15 - k, y + k, "pink"); } }
-        p.rect(x - 1, y + 16, 18, 2, "black");
-        p.rect(x, y + 16, Math.round(16 * u.hp / Math.max(1, u.maxHp)), 1, team(side));
-      });
-    };
-    drawTeam(youAttack ? "atk" : "def", 0, "YOU");
-    drawTeam(youAttack ? "def" : "atk", 1, "RIVAL");
-    p.notch(PX + 2, STRIP_Y + 2, PW - 4, 6, "black");
-    p.dither(PX + 3, STRIP_Y + 3, PW - 6, 4, "black", 1);
-    p.rect(PX + 3, STRIP_Y + 3, Math.round((PW - 6) * s.tau / Math.max(1, s.replay.length - 1)), 4, "black");
-    for (let k = 1; k < 10; k++) p.px(PX + 3 + Math.round((PW - 6) * k / 10), STRIP_Y + 7, "black");
-    record.campaign.battles.forEach((b, i) => {
-      const x = PX + 3 + i * 22;
-      p.rect(x, STRIP_Y + 10, 20, 5, i < s.battle ? (b.result.cleared ? "lime" : "pink") : i === s.battle ? "black" : "white");
-      p.frame(x, STRIP_Y + 10, 20, 5, "black");
-    });
+    let y = PY + 23;
+    for (const line of feed.flatMap(l => wrap(l, PW - 8)).slice(-20)) { p.text(line, PX + 3, y, "black"); y += LINE_H; }
+    const living = (side: "atk" | "def") => state.units.filter(u => u.unit.side === side && u.alive).length;
+    p.text("YOUR SQUAD / " + living(youAttack ? "atk" : "def") + " STANDING", 8, STRIP_Y + 2, "black");
+    p.text("RIVALS / " + living(youAttack ? "def" : "atk") + " STANDING", 132, STRIP_Y + 2, "pink");
+    p.frame(8, STRIP_Y + 10, 232, 4, "black");
+    p.rect(9, STRIP_Y + 11, Math.round(230 * s.tau / Math.max(1, s.replay.length - 1)), 2, "pink");
+    p.text("REGION " + (s.battle + 1) + "/" + n, PX + 4, STRIP_Y + 5, "black");
+
     this.button("restart", 4, BAR_Y, 22, "|◄", () => { s.tau = 0; s.lastFeedTick = -1; s.endedAt = 0; s.playing = true; });
     this.button("rew", 28, BAR_Y, 22, "◄◄", () => this.seek(s, -2 * TICKS_PER_SECOND));
     this.button("play", 52, BAR_Y, 34, s.playing ? "PAUSE" : "PLAY", () => this.togglePlay(s), { primary: !s.playing });
@@ -1173,7 +1153,7 @@ export class App {
     if (s.battle < n - 1) this.button("next", 136, BAR_Y, 44, "NEXT ►", () => this.nextBattle(s));
     this.button("results", s.battle < n - 1 ? 184 : 136, BAR_Y, 58, done ? "RESULTS ►" : "SKIP ►|", () => this.finishPlayback(s), { primary: done });
     if (done) this.ui.settle("results");
-    p.text("SPACE PAUSE · ← → SEEK · F SPEED", 122, HINT_Y, "black");
+    p.text("SPACE PAUSE · ← → SEEK · F SPEED", 57, HINT_Y, "black");
   }
 
   private tileXY(v: { x: number; y: number }) { return [BX + Math.round(v.x * TILE), BY + Math.round(v.y * TILE)] as const; }
@@ -1199,16 +1179,16 @@ export class App {
         const a = units[e.id], b = units[e.target];
         const [ax, ay] = this.tileXY(a), [bx, by] = this.tileXY(b);
         const k = Math.min(1, age / 0.8);
-        const px = ax + 8 + (bx - ax) * k, py = ay + 6 + (by - ay) * k;
+        const px = ax + 10 + (bx - ax) * k, py = ay + 10 + (by - ay) * k;
         p.rect(Math.round(px) - 1, Math.round(py) - 1, 3, 3, "black");
         p.px(Math.round(px), Math.round(py), e.kind === "air" ? "lime" : "pink");
       }
       if (e.e === "power" && e.r && age >= 0 && age < 2) {
         // An expanding dotted pulse (with a fainter trailing ring), clipped to the board.
         const u = units[e.id], [ux, uy] = this.tileXY(u);
-        const reach = e.r * TILE + 8, grow = Math.min(reach, Math.round(6 + (age / 1.2) * reach));
+        const reach = e.r * TILE + 10, grow = Math.min(reach, Math.round(6 + (age / 1.2) * reach));
         const ring = (radius: number, gap: number, color: Color) => {
-          const cx = ux + 8, cy = uy + 8, x0 = cx - radius, y0 = cy - radius, n = radius * 2;
+          const cx = ux + 10, cy = uy + 10, x0 = cx - radius, y0 = cy - radius, n = radius * 2;
           for (let i = 0; i <= n; i += gap) { p.px(x0 + i, y0, color); p.px(x0 + i, y0 + n, color); p.px(x0, y0 + i, color); p.px(x0 + n, y0 + i, color); }
         };
         p.withClip(BX, BY, GRID_W * TILE, GRID_H * TILE, () => {
@@ -1305,7 +1285,7 @@ export class App {
       p.text(`BUY ONE FLAG · ${CLAIM_COST} RF INTO THE POT · BECOME RESIDENT`, 4, STRIP_Y, "black");
       claimable.slice(0, 4).forEach((r, i) => this.button(`claim-${r.key}`, 4 + i * 78, STRIP_Y + 8, 74, `${regionName(r).slice(0, 5)} · 500`, () =>
         this.tryAction(() => { s.claim(rival!.index, r.key); this.buildId = `${rival!.id}/${r.key}`; }, `${regionName(r)} is yours. Garrison it from the build screen.`, "reward"), { disabled: s.ledger.balance < rf(CLAIM_COST), primary: true }));
-      p.text(`${rival!.name} ${rival!.territory.regions.filter(r => r.holder === YOU).length ? "ALREADY HOSTS YOU" : ""}`, 4, STRIP_Y + 24, "black");
+      p.text(`${rival!.name} ${rival!.territory.regions.filter(r => r.holder === YOU).length ? "ALREADY HOSTS YOU" : ""}`, 4, STRIP_Y + 16, "black");
     } else if (record.reclaimable) {
       const r = s.territory.regions.find(x => x.key === record.reclaimable)!;
       p.text("RESIDENT EVICTED · THE FLAG IS DOWN", 4, STRIP_Y, "black");
@@ -1316,9 +1296,9 @@ export class App {
       p.text("TRY ANOTHER PARTY, LANE OR ROUTE WITH PRACTICE ►", 4, STRIP_Y + 7, "black");
     } else {
       p.text("SETTLEMENT (SIMULATED RF)", 4, STRIP_Y, "black");
-      const rows = record.settlement.lines.slice(0, 10);
+      const rows = record.settlement.lines.slice(0, 4);
       rows.forEach((line, i) => {
-        const col = i < 5 ? 0 : 1, x = 4 + col * 158, ly = STRIP_Y + 7 + (i % 5) * LINE_H;
+        const col = i < 2 ? 0 : 1, x = 4 + col * 158, ly = STRIP_Y + 6 + (i % 2) * LINE_H;
         const who = line.to === "burn" ? "BURN" : line.to === "treasury" ? "TRSY" : line.to === "you" ? "YOU" : line.to === "pot" ? "POT" : "RIVAL";
         p.text(line.label.toUpperCase().slice(0, 24), x, ly, "black");
         p.textRight(`${formatRf(line.amount)} ${who}`, x + 154, ly, line.to === "burn" ? "pink" : "black");
@@ -1388,49 +1368,51 @@ export class App {
     p.text(`ROUND ENDS AT BLOCK ${s.round.endBlock.toLocaleString("en-US")} · NOW ${s.block.toLocaleString("en-US")}`, 4, STRIP_Y + 7, "black");
     this.button("back", 4, BAR_Y, 40, "◄ BACK", () => this.go({ kind: "build" }));
     this.button("territory", 48, BAR_Y, 58, "TERRITORY", () => this.go({ kind: "territory", sel: null }));
-    p.text("T TERRITORY · ESC BACK", 122, HINT_Y, "black");
+    p.text("T TERRITORY · ESC BACK", 57, HINT_Y, "black");
   }
 
   // ------------------------------------------------------------------ help
 
   /** Illustrated versus title card with canonical Friend icons. Returns the y where help text may start. */
   private drawCover(s: Session) {
-    const p = this.p, cx = LOGICAL_W / 2, board = s.home().board;
-    p.withClip(5, BY + 12, 309, 98, () => {
-      for (let y = 0; y < 7; y++) for (let x = 0; x < 20; x++) {
-        const tile = tileAt(board, x % GRID_W, y % GRID_H);
-        this.art.tile(tile.kind, 5 + x * 16, BY + 12 + y * 16, x, y, { scenery: board.scenery, dir: tile.dir, frame: this.anim });
-      }
-    });
-    p.panel(29, BY + 15, 262, 25);
-    p.bigCenter("REAL FRENEMIES / VERSUS", cx, BY + 20, "black");
-    p.textCenter("BUILD YOUR HOME. RAID YOUR RIVALS.", cx, BY + 31, "pink");
-    this.art.scenery(4, 18, BY + 56, 42); this.art.scenery(3, 263, BY + 57, 42);
-    const step = this.reducedMotion ? 0 : Math.floor(this.now / 200);
-    p.panel(cx - 28, BY + 46, 56, 56, "lime");
-    p.sprite(spriteBits(s.player, "down", false, step), cx - 24, BY + 50, "black", { scale: 3 });
-    for (const [i, x] of [[0, 68], [2, 218]]) {
-      p.panel(x - 3, BY + 55, 38, 39, "black");
-      p.sprite(spriteBits(s.rivals[i].core, "down", false, step), x, BY + 58, "white", { scale: 2 });
+    const p = this.p, board = generateBoard(s.player.tokenId, s.player.seed, "Garden");
+    for (let y = 0; y < 9; y++) for (let x = 0; x < 12; x++) {
+      const tile = tileAt(board, x, y % GRID_H);
+      this.art.tile(x === 6 ? "water" : tile.kind, x * 27, y * 27, x, y, { scenery: board.scenery, dir: tile.dir, frame: this.anim, same: (dx) => dx === 0 }, 27);
+      if (y === 4) { p.rect(x * 27, y * 27 + 9, 27, 12, "lime"); p.rect(x * 27 + 4, y * 27 + 14, 4, 1, "white"); }
     }
-    p.big("VS", 112, BY + 69, "black"); p.big("VS", 197, BY + 69, "black");
-    p.rect(28, BY + 104, 264, 9, "white");
-    p.textCenter("YOUR FRIEND #" + s.player.tokenId + " / ALL RF SIMULATED", cx, BY + 106, "black");
-    return BY + 119;
+    this.art.scenery(3, 242, 48, 36); this.art.scenery(3, 270, 84, 31); this.art.scenery(4, 247, 115, 48);
+    p.panel(12, 14, 199, 68);
+    p.text("A RARE FRIENDS STRATEGY ADVENTURE", 21, 23, "black");
+    p.ctx.save(); p.ctx.scale(1.5, 1.5); p.big("REAL FRENEMIES", 14, 22, "black"); p.ctx.restore();
+    p.big("RIVAL TERRITORIES", 21, 53, "black");
+    p.text("YOUR FRIEND. YOUR HOME. YOUR NEXT MOVE.", 21, 72, "pink");
+    p.panel(233, 5, 81, 24); p.text("BANNER #" + s.player.tokenId, 240, 14, "black");
+    p.sprite(spriteBits(s.player, "down", false, 0), 293, 9, "black");
+    this.art.portrait(1, 85, 104, 59); this.art.portrait(2, 177, 107, 54); this.art.portrait(0, 128, 92, 71);
+    p.panel(10, 172, 299, 62.5); p.textCenter("A SMALL WORLD. A BETTER RIVALRY.", 160, 181, "black");
+    this.button("close", 20, 193, 168, "START BUILDING", () => this.go({ kind: "build" }), { primary: true, h: 18 });
+    this.button("next", 195, 193, 104, "FIELD GUIDE", () => { if (this.screen.kind === "help") this.screen.page = 1; }, { h: 18 });
+    p.text("BUILD / RAID / DEFEND / EXPAND", 20, 221, "pink");
+    p.text("ALL RF SIMULATED", 215, 221, "pink");
+    this.ui.settle("close");
+    return 0;
   }
+
 
   private drawHelp(screen: Extract<Screen, { kind: "help" }>) {
     const p = this.p;
     const pages = helpPages(this.session);
     const page = pages[screen.page];
-    p.panel(4, BY - 1, LOGICAL_W - 9, BAR_Y - BY - 3);
+    if (page.cover && this.session) { this.drawCover(this.session); return; }
+    p.panel(4, BY - 1, LOGICAL_W - 9, 180);
     p.rect(5, BY, LOGICAL_W - 11, 9, "black");
     if (bigWidth(page.title) <= LOGICAL_W - 40) p.big(page.title, 8, BY + 1, "white"); else p.text(page.title, 8, BY + 2, "white");
     p.textRight(`${screen.page + 1}/${pages.length}`, LOGICAL_W - 10, BY + 2, "lime");
     let y = BY + 13;
-    if (page.cover && this.session) y = this.drawCover(this.session);
+
     for (const para of page.body) {
-      for (const line of wrap(para.toUpperCase(), LOGICAL_W - 16)) { if (y < BAR_Y - 8) p.text(line, 8, y, "black"); y += LINE_H; }
+      for (const line of wrap(para.toUpperCase(), LOGICAL_W - 16)) { if (y < 185) p.text(line, 8, y, "black"); y += LINE_H; }
       y += 2;
     }
     if (page.kits) {
@@ -1451,7 +1433,7 @@ export class App {
     this.button("next", 52, BAR_Y, 44, "NEXT ►", () => { screen.page = Math.min(pages.length - 1, screen.page + 1); }, { disabled: screen.page === pages.length - 1 });
     this.button("close", 100, BAR_Y, 64, screen.back.kind === "build" && !this.session?.history.length && this.session?.day === 1 ? "START BUILDING" : "CLOSE", () => this.go(screen.back), { primary: true });
     if (this.session?.broke) this.button("restart", 168, BAR_Y, 60, "RESTART SIM", () => { this.session!.restart(); this.buildId = `${YOU}/0,0`; this.selection = { kind: "core" }; this.go({ kind: "build" }); });
-    p.text("TAB / ENTER OR CLICK · H HELP · M SOUND", 122, HINT_Y, "black");
+    p.text("TAB / ENTER OR CLICK · H HELP · M SOUND", 57, HINT_Y, "black");
     this.ui.settle("close");
   }
 }

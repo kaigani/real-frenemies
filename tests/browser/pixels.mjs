@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
+import { bigGlyph } from "../../game/src/render/bigfont.ts";
 
 await mkdir("artifacts/pixels", { recursive: true });
 const browser = await chromium.launch();
@@ -16,9 +17,24 @@ try {
     const canvas = page.locator(".rf-game canvas");
     await canvas.focus(); await page.keyboard.press("Escape");
     await page.waitForTimeout(100);
-    const bounds = await canvas.boundingBox(), pixelSize = bounds.width * dpr / 320;
+    // The inspector must use the actual campaign glyphs, with no resampling or substitute font.
+    const expected = [..."READING / PLAIN"].map(bigGlyph);
+    const matches = await canvas.evaluate((c, expected) => {
+      const data = c.getContext("2d").getImageData(506, 152, 90, 7).data;
+      return expected.every((rows, i) => rows.every((row, y) => Array.from({ length: 5 }, (_, x) => {
+        const off = (y * 90 + i * 6 + x) * 4;
+        return Boolean(row & 1 << x) === (data[off] === 97 && data[off + 1] === 123 && data[off + 2] === 82);
+      }).every(Boolean)));
+    }, expected);
+    assert(matches, "Versus body text must match the campaign 5x7 font exactly");
+    const bounds = await canvas.boundingBox(), pixelSize = bounds.width * dpr / 640;
+    if (pixelSize < .999) {
+      await page.getByLabel("Versus command deck").getByRole("button", { name: "Raid", exact: true }).waitFor();
+      await page.screenshot({ path: `artifacts/pixels/${width}-${dpr}.png`, scale: "device" });
+      await page.close(); console.log(`PASS campaign font / compact overview and touch controls: ${width}px / DPR ${dpr}`); continue;
+    }
     assert(Math.abs(pixelSize - Math.round(pixelSize)) < .001, "Font pixels must occupy whole device pixels");
-    assert(Math.abs(bounds.height * dpr / 240 - pixelSize) < .001, "Font pixels must be square");
+    assert(Math.abs(bounds.height * dpr / 480 - pixelSize) < .001, "Font pixels must be square");
     const screenshot = await page.screenshot({ path: `artifacts/pixels/${width}-${dpr}.png`, scale: "device" });
     const result = await page.evaluate(async ({ png, bounds, dpr, pixelSize }) => {
       const image = new Image(); image.src = `data:image/png;base64,${png}`; await image.decode();
@@ -28,7 +44,7 @@ try {
       const color = (x, y) => pixels.subarray((y * c.width + x) * 4, (y * c.width + x) * 4 + 3).join(",");
       let uneven = 0, ink = 0;
       // The same six-line Friend statistics panel shown in the reported font defect.
-      for (let y = 61; y < 103; y++) for (let x = 203; x < 312; x++) {
+      for (let y = 120; y < 270; y++) for (let x = 502; x < 624; x++) {
         const left = Math.round(bounds.x * dpr + x * pixelSize), top = Math.round(bounds.y * dpr + y * pixelSize);
         const expected = color(left, top);
         if (expected === "24,44,36") ink++;

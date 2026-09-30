@@ -178,11 +178,13 @@ quantized, then drawn without smoothing; CSS uses `image-rendering: pixelated` t
 The four original colors remain light #dbe7ad, mid #a6ba76, shade #617b52 and dark #182c24.
 See [asset prompts](assets/lantern/PROMPTS.md) for source provenance and repacking instructions.
 
-Versus territory mode also renders at **640 × 480**, with **32 × 32** terrain tiles across all eight scenery types.
+Versus territory mode also renders at **640 × 480**, with **40 × 40** terrain tiles across all eight scenery types.
 Canonical **16 × 16** Friend sprites are drawn at 2×; enemies use pale fills and dark outlines. Scouting maps reuse
-the detailed terrain, and a framed commander portrait supplies contextual instructions below the battlefield.
+the detailed terrain. Both modes use the same **5 × 7 font** and shared campaign frame drawing. Versus has an
+illustrated title scene, a 480 × 320 battlefield, a narrow inspector, a paginated single-row recruit tray, and
+the campaign's **94-pixel portrait** dialogue panel with contextual commands below the battlefield.
 Both modes reserve extra height on narrow screens for readable status text and a **44-pixel touch command deck**.
-Versus text uses the compact bitmap font at exact 2× native size. Its display scale snaps to half-native steps,
-so every font pixel occupies an equal, whole number of device pixels on desktop and phone displays. Canvas
-placement also aligns to device pixels; spare space is left around the image instead of stretching the letters.
-`npm run test:pixels` (with the demo running) checks the displayed statistics panel at eight viewport/DPI combinations.
+The shared font is drawn without stretching or changing its glyph grid. Both modes enlarge at whole device-pixel
+multiples with pixel-aligned canvas placement. Low-DPI phones that cannot fit the native display retain a scaled
+overview and readable HTML touch commands. `npm run test:pixels` (with the demo running) checks exact campaign glyphs,
+displayed pixel sizes and the compact phone fallback at eight viewport/DPI combinations.

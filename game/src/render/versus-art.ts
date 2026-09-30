@@ -8,6 +8,7 @@ import type { TileOptions } from "./tiles.ts";
 export class VersusArt {
   readonly atlas = new Atlas();
   private p: Painter;
+  private tiles = new Map<string, HTMLCanvasElement>();
   constructor(ctx: CanvasRenderingContext2D) { this.p = new Painter(ctx); }
   load() { return this.atlas.load(); }
   portrait(index: number, x: number, y: number, size: number) {
@@ -19,9 +20,20 @@ export class VersusArt {
     this.atlas.draw(ctx, "terrain", index, x * 2, y * 2, size * 2); ctx.restore();
   }
   tile(kind: TileKind, x: number, y: number, tx: number, ty: number, opts: TileOptions, size = 16) {
-    const ctx = this.p.ctx; ctx.save(); ctx.scale(.5, .5); ctx.translate(x * 2, y * 2);
-    ctx.scale(size / 16, size / 16); ctx.beginPath(); ctx.rect(0, 0, 32, 32); ctx.clip();
-    this.nativeTile(kind, tx, ty, opts); ctx.restore();
+    const adjacent = [[0, -1], [0, 1], [-1, 0], [1, 0]].map(([dx, dy]) => opts.same?.(dx, dy) ? 1 : 0).join("");
+    const frame = (opts.frame ?? 0) % 12;
+    const key = [kind, tx, ty, opts.scenery, opts.dir, opts.hp, opts.maxHp, frame, adjacent].join(":");
+    let tile = this.tiles.get(key);
+    if (!tile) {
+      tile = document.createElement("canvas"); tile.width = tile.height = 32;
+      const original = this.p; this.p = new Painter(tile.getContext("2d")!);
+      try { this.nativeTile(kind === "overgrowth" ? "ground" : kind, tx, ty, { ...opts, frame }); } finally { this.p = original; }
+      this.tiles.set(key, tile);
+    }
+    const ctx = this.p.ctx; ctx.save(); ctx.scale(.5, .5);
+    ctx.drawImage(tile, x * 2, y * 2, size * 2, size * 2);
+    if (kind === "overgrowth") this.atlas.draw(ctx, "terrain", (tx + ty) % 3 ? SCENERY.pines : SCENERY.oak, x * 2, y * 2, size * 2);
+    ctx.restore();
   }
   private ground(scenery: Scenery | undefined, hash: number) {
     const p = this.p;
