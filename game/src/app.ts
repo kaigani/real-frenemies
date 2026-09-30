@@ -14,7 +14,6 @@ import type { SimEvent } from "./sim.ts";
 import { buildable, tileAt, WALL_HP, type Board } from "./terrain.ts";
 import { garrisoned, regionKey, regionName, YOU, type Piece, type Region, type Territory } from "./territory.ts";
 import { Painter, type Color } from "./render/draw.ts";
-import { VersusPainter } from "./render/versus-painter.ts";
 import { LINE_H, textWidth, wrap } from "./render/font.ts";
 import { bigWidth } from "./render/bigfont.ts";
 import { TILE, TILE_NAMES } from "./render/tiles.ts";
@@ -83,7 +82,8 @@ export class App {
   private lastImpact = 0;
 
   constructor(ctx: CanvasRenderingContext2D, host: AppHost) {
-    this.p = new VersusPainter(ctx);
+    // The compact 3x5 font is drawn at exactly 2x with the logical UI, never resampled into a different grid.
+    this.p = new Painter(ctx);
     this.art = new VersusArt(ctx);
     this.host = host;
   }

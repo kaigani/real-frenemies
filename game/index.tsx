@@ -54,18 +54,22 @@ export default function RealFrenemies({ friendId, client, paused }: GameComponen
     const box = wrap.current!, c = canvas.current!;
     const fit = () => {
       const dpr = window.devicePixelRatio || 1;
-      const w = Math.round(box.clientWidth * dpr), h = Math.round(box.clientHeight * dpr);
+      const bounds = box.getBoundingClientRect();
+      const w = Math.floor(bounds.width * dpr), h = Math.floor(bounds.height * dpr);
       const deckHeight = box.clientWidth <= 640 ? 245 * dpr : 0;
       const fitScale = Math.min(w / nativeWidth, (h - deckHeight) / nativeHeight);
-      const scale = Math.max(.25, fitScale);
+      // Versus letters have 2x2 native pixels. Half-native scale steps therefore map each
+      // font pixel to 1, 2, 3... device pixels, even at fractional browser zoom / Retina DPI.
+      const scale = mode === "territory" && fitScale >= .5 ? Math.floor(fitScale * 2) / 2 : Math.max(.25, fitScale);
       const cw = Math.round(nativeWidth * scale), ch = Math.round(nativeHeight * scale);
       c.style.width = `${cw / dpr}px`;
       c.style.height = `${ch / dpr}px`;
       box.style.setProperty("--rf-canvas-height", `${ch / dpr}px`);
-      c.style.left = `${Math.floor((w - cw) / 2) / dpr}px`;
+      c.style.left = `${(Math.round(bounds.left * dpr + (w - cw) / 2) - bounds.left * dpr) / dpr}px`;
       // With spare height (narrow 4:3 frames), pin to the top so the runtime toolbar sits in the band below.
       const spare = h - ch;
-      c.style.top = `${(spare >= 24 * dpr ? 0 : Math.floor(spare / 2)) / dpr}px`;
+      const top = spare >= 24 * dpr ? 0 : Math.floor(spare / 2);
+      c.style.top = `${(Math.round(bounds.top * dpr + top) - bounds.top * dpr) / dpr}px`;
     };
     fit();
     const observer = new ResizeObserver(fit);

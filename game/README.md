@@ -182,3 +182,7 @@ Versus territory mode also renders at **640 × 480**, with **32 × 32** terrain 
 Canonical **16 × 16** Friend sprites are drawn at 2×; enemies use pale fills and dark outlines. Scouting maps reuse
 the detailed terrain, and a framed commander portrait supplies contextual instructions below the battlefield.
 Both modes reserve extra height on narrow screens for readable status text and a **44-pixel touch command deck**.
+Versus text uses the compact bitmap font at exact 2× native size. Its display scale snaps to half-native steps,
+so every font pixel occupies an equal, whole number of device pixels on desktop and phone displays. Canvas
+placement also aligns to device pixels; spare space is left around the image instead of stretching the letters.
+`npm run test:pixels` (with the demo running) checks the displayed statistics panel at eight viewport/DPI combinations.

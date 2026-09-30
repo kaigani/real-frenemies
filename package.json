@@ -20,6 +20,7 @@
     "art:pack": "node scripts/pack-lantern-art.mjs",
     "test:play": "node tests/browser/playthrough.mjs",
     "test:setup": "node tests/browser/setup.mjs",
+    "test:pixels": "node tests/browser/pixels.mjs",
     "test:tactics": "node tests/browser/tactics.mjs"
   },
   "dependencies": {

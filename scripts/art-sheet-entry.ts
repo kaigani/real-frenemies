@@ -1,7 +1,7 @@
 /** Browser entry for the terrain art sheet: one generated board per Scenery at native resolution. */
 import { POOL, SCENERIES } from "../game/src/friends.ts";
 import { generateBoard, tileAt } from "../game/src/terrain.ts";
-import { VersusPainter } from "../game/src/render/versus-painter.ts";
+import { Painter } from "../game/src/render/draw.ts";
 import { VersusArt } from "../game/src/render/versus-art.ts";
 import { TILE } from "../game/src/render/tiles.ts";
 import { GRID_H, GRID_W } from "../game/src/rules.ts";
@@ -11,7 +11,7 @@ canvas.style.width = `${canvas.width}px`; canvas.style.imageRendering = "pixelat
 document.body.style.margin = "0"; document.body.appendChild(canvas);
 const ctx = canvas.getContext("2d")!;
 ctx.scale(2, 2);
-const p = new VersusPainter(ctx), art = new VersusArt(ctx);
+const p = new Painter(ctx), art = new VersusArt(ctx);
 void art.load().then(() => {
 p.rect(0, 0, canvas.width, canvas.height, "white");
 SCENERIES.forEach((scenery, i) => {
