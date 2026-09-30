@@ -1,11 +1,14 @@
 # Real Frenemies
 
-**The Lantern Road** is now the default: a four-chapter, directly controlled turn-based tactics campaign in a
+The shared main menu offers **PvP Battle**, **Campaign**, and **Guide**, with PvP Battle as the primary mode.
+PvP Battle opens straight into base building. The current preview uses simulated rivals and balances; live matchmaking is not implemented.
+
+**Campaign / The Lantern Road** is a four-chapter, directly controlled turn-based tactics campaign in a
 four-tone handheld palette. Command a Warden, Ranger and Mender; dodge locked enemy attacks, shove foes into water,
 protect the lantern and reclaim the signal. Your selected Rare Friend appears on the squad banner and leads the battlefield as Pip.
 Battlefield units use chunky canonical Rare Friend icons; detailed illustrated characters appear in the portraits and narrative callouts.
 The campaign renders at 640 × 480 with detailed 40-pixel terrain, six illustrated characters, and large narrative portraits.
-The versus territory simulation is available from **Territory Mode** on the title screen. It shares the 640 × 480
+The territory simulation is available from **PvP Battle** on the main menu. It shares the 640 × 480
 display, 40-pixel terrain across all eight scenery types, 94-pixel commander callouts, and chunky Friend icons.
 Campaign mode defines both modes' typography, frames, title scenes and command panels through shared rendering code.
 Rivals use pale sprites with dark outlines; phones have a dedicated versus command deck.
@@ -21,7 +24,12 @@ ends that friend's movement. Ranger Pierce requires standing still. Each mission
 medals, with chapter selection and best medals retained within the session. `npm run test:tactics` (with the demo running) plays all four chapters through public browser controls;
 append `-- 360` for a phone-width pass. `npm test` also proves legal, no-loss solutions for every chapter.
 
-The territory-mode documentation below describes the separate original simulation.
+Use **Main Menu** or the **Home** key from either mode to return without resetting progress.
+Switching modes preserves bases, raid setups, campaign turns and medals until you leave or reload.
+**Guide** explains both modes; **H** opens detailed rules while playing.
+`npm run test:navigation` checks these routes at desktop and phone sizes with the demo running.
+
+The PvP Battle documentation below describes the territory simulation.
 
 A tower-defense-meets-raid game for the [Rare Friends Vibeathon](https://github.com/spokesz/rarefriends-vibeathon),
 built on [FriendSDK v0.1.2](https://github.com/spokesz/friendsdk). Your Rare Friend is the Core of a territory

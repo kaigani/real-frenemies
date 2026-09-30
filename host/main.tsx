@@ -68,23 +68,23 @@ function Setup({ session }: { session: FriendWalletSession }) {
   }
 
   return <div className="lantern-host">
-    <header className="host-header"><a className="host-brand" href="./" aria-label="Real Frenemies home">RF<span>RARE FRIENDS<br />THE LANTERN ROAD</span></a><span className="host-edition">A POCKET TACTICAL ADVENTURE</span><a href="./demo/">Try the demo ↗</a></header>
-    {playing && chosen ? <section className="play-shell" aria-label="The Lantern Road">
+    <header className="host-header"><a className="host-brand" href="./" aria-label="Real Frenemies home">RF<span>RARE FRIENDS<br />REAL FRENEMIES</span></a><span className="host-edition">A POCKET TACTICAL ADVENTURE</span><a href="./demo/">Try the demo ↗</a></header>
+    {playing && chosen ? <section className="play-shell" aria-label="Real Frenemies">
       <div className="play-heading"><span>● &nbsp; {chosen.label} / {short(wallet.account!)}</span><button onClick={() => setPlaying(false)}>Back to setup</button></div>
       <ConnectedGameHost definition={definition} frameUrl="./game.html" selectedFriend={chosen} account={wallet.account} chainId={wallet.chainId} publicClient={client} revision={wallet.revision} />
       <p className="play-note">Returning to setup restarts the adventure. Progress lasts for this session.</p>
     </section> : <main className="setup-shell">
-      <section className="setup-story" aria-label="Welcome to The Lantern Road">
-        <p className="eyebrow">REAL FRENEMIES / VOL. 01</p><h1>The Lantern<br />Road</h1><p className="story-tagline">Three friends.<br />One last light.</p>
+      <section className="setup-story" aria-label="Welcome to Real Frenemies">
+        <p className="eyebrow">REAL FRENEMIES / VOL. 01</p><h1>Real<br />Frenemies</h1><p className="story-tagline">Build your home.<br />Raid your rivals.</p>
         <div className="setup-art" role="img" aria-label="Pip, the horned woodland warden" style={{ backgroundImage: `url("${characterUrl}")` }} />
         <blockquote>“Ready when you are.<br />Let's bring the light home.”<cite>— PIP, WARDEN OF THE ROAD</cite></blockquote>
-        <div className="story-facts"><span>4 CHAPTERS</span><span>TURN-BASED TACTICS</span><span>EVERY MOVE MATTERS</span></div>
+        <div className="story-facts"><span>PVP BATTLE</span><span>CAMPAIGN</span><span>GUIDE</span></div>
       </section>
       <section className="setup-panel" aria-label="Game setup">
         <ol className="setup-steps" aria-label="Setup progress"><li data-active={!connected}>01 <span>CONNECT</span></li><li data-active={connected && !chosen}>02 <span>CHOOSE</span></li><li data-active={Boolean(chosen)}>03 <span>PLAY</span></li></ol>
         <div className="setup-content">
-          <p className="eyebrow">YOUR ADVENTURE STARTS HERE</p><h2>{chosen ? "Ready for the road?" : connected ? "Choose your Friend." : "Bring a Friend."}</h2>
-          <p className="setup-intro">{chosen ? "Your Friend leads the squad. Plan together, protect the lantern, and make it home." : connected ? "Pick a hardwired Rare Friend to carry your banner. Every Friend starts on equal footing." : "Connect your wallet, choose a Rare Friend, and lead your squad through four handcrafted battles."}</p>
+          <p className="eyebrow">YOUR ADVENTURE STARTS HERE</p><h2>{chosen ? "Ready to play?" : connected ? "Choose your Friend." : "Bring a Friend."}</h2>
+          <p className="setup-intro">{chosen ? "Your Friend carries your banner. Build a base, raid rivals, or explore the story campaign." : connected ? "Pick a hardwired Rare Friend to carry your banner. Every Friend starts on equal footing." : "Connect your wallet, choose a Rare Friend, and enter Real Frenemies."}</p>
           <div className="wallet-state" data-connected={connected}><span className="state-light" /><div><strong>{connected ? "Wallet connected" : wallet.status === "wrong-network" ? "Switch network to continue" : "Robinhood mainnet"}</strong><small>{wallet.account ? <span title={wallet.account}>{short(wallet.account)}</span> : "Connection only · no signing or spending"}</small></div>{wallet.account && <button className="text-button" onClick={() => session.disconnect()}>Disconnect</button>}</div>
           {wallet.error && <p className="setup-error" role="alert">{wallet.error}</p>}
           {wallet.status === "unavailable" && <div className="setup-message"><strong>Open your wallet to begin.</strong><p>Enable your browser wallet extension, or open this page in your wallet's browser.</p><button className="primary" onClick={() => { void session.connect(); }}>Check for wallet</button></div>}
@@ -97,7 +97,7 @@ function Setup({ session }: { session: FriendWalletSession }) {
             {valid.friends.length ? <div className="owned-friends" aria-label="Your Friends">{valid.friends.map(friend => <button className="friend-card" key={String(friend.id)} aria-pressed={friend.id === chosen?.id} onClick={() => { setSelection({ revision: wallet.revision, friend }); setManualError(""); }}><FriendIcon id={friend.id} /><span><strong>{friend.label}</strong><small>GEN {friend.generation} / HARDWIRED</small></span><span className="friend-check" aria-hidden="true">{friend.id === chosen?.id ? "✓" : "+"}</span></button>)}</div> : <p className="setup-message">{valid.hidden ? "Your Friends are generation 0. Play needs a hardwired Friend (generation 1 or higher)." : "No Rare Friends were found in this wallet. Switch accounts, look up a Friend below, or try the demo."}</p>}
             {valid.hidden > 0 && valid.friends.length > 0 && <p className="quiet">{valid.hidden} generation-0 Friends aren't eligible to play.</p>}</>}
           {connected && <details className="manual-friend"><summary>Know your Friend number?</summary><p>Look it up directly if your collection isn't appearing.</p><form onSubmit={event => { void findFriend(event); }}><label htmlFor="friend-number">Friend number</label><div><input id="friend-number" inputMode="numeric" autoComplete="off" placeholder="e.g. 7730" value={manual} onChange={event => setManual(event.target.value)} /><button disabled={manualBusy || !manual.trim()}>{manualBusy ? "Checking…" : "Find Friend"}</button></div></form>{manualError && <p role="alert" className="setup-error">{manualError}</p>}</details>}
-          {chosen && <div className="launch-area"><p><strong>{chosen.label}</strong> is ready to lead your squad.</p><button className="primary" onClick={() => setPlaying(true)}>Start adventure <span aria-hidden="true">→</span></button></div>}
+          {chosen && <div className="launch-area"><p><strong>{chosen.label}</strong> is ready to lead your squad.</p><button className="primary" onClick={() => setPlaying(true)}>Enter game <span aria-hidden="true">→</span></button></div>}
           <div className="setup-footer"><span>Just exploring?</span> <a href="./demo/">Play without a wallet ↗</a><p>No RF or gas needed. Game balances are simulated.<br />Progress resets when you leave or reload.</p></div>
         </div>
       </section>

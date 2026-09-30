@@ -64,7 +64,7 @@ function Demo() {
       <nav aria-label="Demo navigation"><span className="demo-edition">TACTICAL ADVENTURE / VOL. 01</span>
       {friend && <button type="button" onClick={() => pick(null)}>Friend #{String(friend.tokenId)} ↗</button>}</nav>
     </header>
-    <div className="demo-intro"><div><p className="demo-eyebrow">A LITTLE WORLD. A BETTER PLAN.</p><h1>The Lantern Road<span>Real Frenemies</span></h1></div><p>Three friends. Four chapters.<br />Bring the light back, one turn at a time.</p></div>
+    <div className="demo-intro"><div><p className="demo-eyebrow">A LITTLE WORLD. A BETTER PLAN.</p><h1>Real Frenemies<span>PvP Battle / Campaign / Guide</span></h1></div><p>Build your home. Raid your rivals.<br />Make every Friend count.</p></div>
     <main className="demo-console">
     <div className="demo-screen-label"><span><i /> DOT MATRIX WITH FRIENDS</span><span>RF — 001</span></div>
     <div className="demo-frame">
@@ -74,7 +74,7 @@ function Demo() {
     </div>
     <div className="demo-console-foot"><strong>REAL FRIENDS<span> / POCKET TACTICS</span></strong><span className="demo-speaker" aria-hidden="true">▰ ▰ ▰ ▰ ▰</span></div>
     </main>
-    <footer className="demo-footer"><p><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Select <span>·</span> <kbd>↑←↓→</kbd> Aim <span>·</span> <kbd>Enter</kbd> Confirm <span>·</span> <kbd>U</kbd> Undo <span>·</span> <kbd>H</kbd> Help</p><p>Free demo · No wallet needed · Progress resets on reload.<br />Rare Friends / The Lantern Road. All territory balances are simulated. <a href="../">Wallet preview ↗</a></p></footer>
+    <footer className="demo-footer"><p><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Select <span>·</span> <kbd>↑←↓→</kbd> Aim <span>·</span> <kbd>Enter</kbd> Confirm <span>·</span> <kbd>U</kbd> Undo <span>·</span> <kbd>H</kbd> Help</p><p>Free demo · No wallet needed · Progress resets on reload.<br />Rare Friends / Real Frenemies. All territory balances are simulated. <a href="../">Wallet preview ↗</a></p></footer>
   </>;
 }
 

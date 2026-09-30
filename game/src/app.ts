@@ -34,6 +34,7 @@ const HINT_Y = 215;
 
 export type Cue = "select" | "purchase" | "action-start" | "action-ready" | "anticipation" | "impact" | "reveal-common" | "reveal-rare" | "reward";
 export type AppHost = {
+  mainMenu?(): void;
   friendId: bigint;
   play(cue: Cue): void;
   setMuted(muted: boolean): void;
@@ -75,6 +76,7 @@ export class App {
   private now = 0;
   private lastFrame = 0;
   private paused = false;
+  private active = true;
   muted = true;
   reducedMotion = false;
   private raf = 0;
@@ -94,6 +96,8 @@ export class App {
   }
 
   dispose() { cancelAnimationFrame(this.raf); this.loadToken++; }
+
+  setActive(on: boolean) { this.active = on; this.lastFrame = 0; if (on) { this.emitState(); this.host.announce(this.summary()); this.render(); } }
 
   setPaused(paused: boolean) {
     this.paused = paused;
@@ -116,7 +120,7 @@ export class App {
       this.cursor = { x: home.board.core.x - 3, y: home.board.core.y };
       this.buildId = `${YOU}/0,0`;
       this.selection = { kind: "core" };
-      this.go({ kind: "help", page: 0, back: { kind: "build" } });
+      this.go({ kind: "build" });
       this.host.announce(`Base loaded for Friend ${player.tokenId}, a ${player.character} on ${player.scenery} terrain.${block === null ? " Block number unavailable; the round clock starts at block 0." : ""}`);
     } catch (cause) {
       if (token !== this.loadToken) return;
@@ -153,7 +157,7 @@ export class App {
     this.emitState();
   }
 
-  summary() { return this.session ? `VERSUS / DAY ${this.session.day} / ${formatRf(this.session.ledger.balance)} SIM RF` : "PREPARING YOUR TERRITORY"; }
+  summary() { return this.session ? `PVP BATTLE / DAY ${this.session.day} / ${formatRf(this.session.ledger.balance)} SIM RF` : "PREPARING YOUR TERRITORY"; }
 
   key(event: KeyboardEvent): boolean {
     if (this.paused) return false;
@@ -358,6 +362,7 @@ export class App {
   // ------------------------------------------------------------------ frame
 
   private frame(t: number) {
+    if (!this.active) return;
     const dt = this.lastFrame ? Math.min(100, t - this.lastFrame) : 0;
     this.lastFrame = t;
     this.now = t;
@@ -479,13 +484,13 @@ export class App {
   private drawTopBar() {
     const p = this.p, s = this.session;
     p.rect(0, 0, LOGICAL_W, 11, "black");
-    p.big(s ? `VERSUS / DAY ${s.day}` : "RIVAL TERRITORIES", 5, 2, "white");
+    p.big(s ? `PVP BATTLE / DAY ${s.day}` : "BATTLE", 5, 2, "white");
     if (s) {
       p.text(`SIM RF ${formatRf(s.ledger.balance)}`, 120, 4, "white");
       p.text(`POT ${formatRf(s.round.pot)}`, 187, 4, "lime");
     }
-    this.smallToggle("sound", 250, this.muted ? "SND OFF" : "SND ON", () => this.setMuted(!this.muted), `Sound ${this.muted ? "off" : "on"}`);
-    this.smallToggle("motion", 284, this.reducedMotion ? "FX LOW" : "FX ON", () => this.setReducedMotion(!this.reducedMotion), `Reduced motion ${this.reducedMotion ? "on" : "off"}`);
+    this.smallToggle("sound", 238, this.muted ? "SND OFF" : "SND ON", () => this.setMuted(!this.muted), `Sound ${this.muted ? "off" : "on"}`);
+    this.button("main-menu", 275, 1, 42, "MAIN MENU", () => this.host.mainMenu?.(), { h: 9 });
   }
 
   private smallToggle(id: string, x: number, label: string, activate: () => void, name: string) {
@@ -1373,38 +1378,10 @@ export class App {
 
   // ------------------------------------------------------------------ help
 
-  /** Illustrated versus title card with canonical Friend icons. Returns the y where help text may start. */
-  private drawCover(s: Session) {
-    const p = this.p, board = generateBoard(s.player.tokenId, s.player.seed, "Garden");
-    for (let y = 0; y < 9; y++) for (let x = 0; x < 12; x++) {
-      const tile = tileAt(board, x, y % GRID_H);
-      this.art.tile(x === 6 ? "water" : tile.kind, x * 27, y * 27, x, y, { scenery: board.scenery, dir: tile.dir, frame: this.anim, same: (dx) => dx === 0 }, 27);
-      if (y === 4) { p.rect(x * 27, y * 27 + 9, 27, 12, "lime"); p.rect(x * 27 + 4, y * 27 + 14, 4, 1, "white"); }
-    }
-    this.art.scenery(3, 242, 48, 36); this.art.scenery(3, 270, 84, 31); this.art.scenery(4, 247, 115, 48);
-    p.panel(12, 14, 199, 68);
-    p.text("A RARE FRIENDS STRATEGY ADVENTURE", 21, 23, "black");
-    p.ctx.save(); p.ctx.scale(1.5, 1.5); p.big("REAL FRENEMIES", 14, 22, "black"); p.ctx.restore();
-    p.big("RIVAL TERRITORIES", 21, 53, "black");
-    p.text("YOUR FRIEND. YOUR HOME. YOUR NEXT MOVE.", 21, 72, "pink");
-    p.panel(233, 5, 81, 24); p.text("BANNER #" + s.player.tokenId, 240, 14, "black");
-    p.sprite(spriteBits(s.player, "down", false, 0), 293, 9, "black");
-    this.art.portrait(1, 85, 104, 59); this.art.portrait(2, 177, 107, 54); this.art.portrait(0, 128, 92, 71);
-    p.panel(10, 172, 299, 62.5); p.textCenter("A SMALL WORLD. A BETTER RIVALRY.", 160, 181, "black");
-    this.button("close", 20, 193, 168, "START BUILDING", () => this.go({ kind: "build" }), { primary: true, h: 18 });
-    this.button("next", 195, 193, 104, "FIELD GUIDE", () => { if (this.screen.kind === "help") this.screen.page = 1; }, { h: 18 });
-    p.text("BUILD / RAID / DEFEND / EXPAND", 20, 221, "pink");
-    p.text("ALL RF SIMULATED", 215, 221, "pink");
-    this.ui.settle("close");
-    return 0;
-  }
-
-
   private drawHelp(screen: Extract<Screen, { kind: "help" }>) {
     const p = this.p;
     const pages = helpPages(this.session);
     const page = pages[screen.page];
-    if (page.cover && this.session) { this.drawCover(this.session); return; }
     p.panel(4, BY - 1, LOGICAL_W - 9, 180);
     p.rect(5, BY, LOGICAL_W - 11, 9, "black");
     if (bigWidth(page.title) <= LOGICAL_W - 40) p.big(page.title, 8, BY + 1, "white"); else p.text(page.title, 8, BY + 2, "white");
@@ -1431,7 +1408,7 @@ export class App {
     }
     this.button("prev", 4, BAR_Y, 44, "◄ PREV", () => { screen.page = Math.max(0, screen.page - 1); }, { disabled: screen.page === 0 });
     this.button("next", 52, BAR_Y, 44, "NEXT ►", () => { screen.page = Math.min(pages.length - 1, screen.page + 1); }, { disabled: screen.page === pages.length - 1 });
-    this.button("close", 100, BAR_Y, 64, screen.back.kind === "build" && !this.session?.history.length && this.session?.day === 1 ? "START BUILDING" : "CLOSE", () => this.go(screen.back), { primary: true });
+    this.button("close", 100, BAR_Y, 64, "BACK TO BATTLE", () => this.go(screen.back), { primary: true });
     if (this.session?.broke) this.button("restart", 168, BAR_Y, 60, "RESTART SIM", () => { this.session!.restart(); this.buildId = `${YOU}/0,0`; this.selection = { kind: "core" }; this.go({ kind: "build" }); });
     p.text("TAB / ENTER OR CLICK · H HELP · M SOUND", 57, HINT_Y, "black");
     this.ui.settle("close");
@@ -1449,15 +1426,11 @@ function resultTitle(record: RaidRecord): string {
   }
 }
 
-type HelpPage = { title: string; body: string[]; kits?: boolean; cover?: boolean };
+type HelpPage = { title: string; body: string[]; kits?: boolean };
 function helpPages(session: Session | null): HelpPage[] {
   const you = session?.player;
   const aff = you ? AFFINITY[you.scenery] : null;
   return [
-    { title: "WELCOME", cover: true, body: [
-      you ? `Your Friend is the Core of a ${you.scenery} territory generated from its token. Garrison it with recruits, raid your frenemies, buy their flags and top the round for the pot.` : "Your Friend is the Core of a territory generated from its token.",
-      "Every piece's powers come from its on-chain traits. Next for the rules, or start building.",
-    ] },
     { title: "HOW A DAY WORKS", body: [
       you ? `Your Friend #${you.tokenId} (${you.character}) is the Core. If a raid knocks it out, your home board resets.` : "If a raid knocks out your Core, your home board resets.",
       "Day loop: build your garrisons, optionally raid a rival, then defend against tonight's raid while the ghosts fight each other. Raiders leave their tile empty at home until the next day.",
@@ -1503,7 +1476,7 @@ function helpPages(session: Session | null): HelpPage[] {
     { title: "CONTROLS", body: [
       "Mouse / touch: click a Friend, then a tile. Buttons along the bottom.",
       "Keyboard: Tab / Shift+Tab move focus, Enter selects, arrows move the board cursor or the roster pick. R raid, E end day, L level up, X remove, [ ] switch region, T territory, O round, H help, M sound, Esc back.",
-      "Playback: Space pause, left / right seek 2 s, F toggles 2x, Esc skips to results. Reduce motion (FX LOW) steps replays at 4 per second with no particles or shake.",
+      "Playback: Space pause, left / right seek 2 s, F toggles 2x, Esc skips to results. Reduce motion in Game settings steps replays at 4 per second with no particles or shake.",
       `Recruit pool snapshot from Robinhood mainnet block ${POOL_SOURCE.blockNumber} (${POOL_SOURCE.readAt}). Economy, raids and rivals are simulated for the Vibeathon preview; reloading starts a new session.`,
     ] },
   ];

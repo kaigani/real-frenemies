@@ -1,4 +1,5 @@
 /** Play every campaign mission using only public canvas input. Requires npm run demo. */
+import { control } from "./canvas-control.mjs";
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
@@ -15,15 +16,20 @@ try {
   const status = page.getByRole("status"), canvas = page.locator(".rf-game canvas");
   const touch = page.getByLabel("Touch command deck"), mobile = width < 600;
   const input = async (key, label) => mobile ? touch.getByRole("button", { name: label, exact: true }).click() : page.keyboard.press(key);
-  await status.filter({ hasText: "The Lantern Road" }).waitFor();
-  const shot = async name => { await page.waitForTimeout(40); await page.screenshot({ path: `${out}/${name}.png`, fullPage: true }); };
+  await status.filter({ hasText: "Main menu:" }).waitFor();
+  const shot = async name => { await page.waitForTimeout(40); await page.screenshot({ path: `${out}/${name}.png`, fullPage: true });
+    if (/brief|battle|victory|ending/.test(name)) {
+      const before = await canvas.evaluate(c => JSON.parse(c.dataset.controls).map(w => w.id));
+      await control(canvas, "main-menu"); await control(canvas, "campaign-mode"); await page.waitForTimeout(40);
+      assert.deepEqual(await canvas.evaluate(c => JSON.parse(c.dataset.controls).map(w => w.id)), before, name + ": campaign screen resumes from menu");
+    } };
   const tap = async (x, y) => { const box = await canvas.boundingBox(); await canvas.click({ position: { x: x * box.width / 640, y: y * box.height / 480 } }); await page.waitForTimeout(20); };
   const tile = async p => tap(8 + p.x * 40 + 20, 24 + p.y * 40 + 20);
   await shot("01-title");
   const palette = await canvas.evaluate(c => { const data = c.getContext("2d").getImageData(0, 0, c.width, c.height).data; const colors = new Set(); for (let i = 0; i < data.length; i += 4) colors.add(`${data[i]},${data[i+1]},${data[i+2]}`); return [...colors]; });
   assert.deepEqual(palette.sort(), ["24,44,36", "219,231,173", "166,186,118", "97,123,82"].sort(), "generated art uses exactly the original four LCD colors");
   assert.deepEqual(await canvas.evaluate(c => [c.width, c.height]), [640, 480], "campaign renders at the new native resolution");
-  await canvas.focus(); await input("Enter", "Start adventure"); await page.waitForTimeout(30);
+  await control(canvas, "campaign-mode"); await page.waitForTimeout(30);
   for (let mission = 0; mission < 4; mission++) {
     await shot(`chapter-${mission + 1}-brief`); if (mobile) await input("Enter", "Continue"); else await tap(323, 445);
     let model = createBattle(mission);

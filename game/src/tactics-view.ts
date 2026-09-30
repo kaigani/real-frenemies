@@ -8,7 +8,7 @@ import { at, canAct, living, medals, MISSIONS, objective, reachable, ROLES, same
 
 export const TACTICS_W = 640, TACTICS_H = 480;
 export const MAP_X = 8, MAP_Y = 24, MAP_TILE = 40;
-export type ViewPage = "title" | "brief" | "battle" | "result" | "help" | "ending" | "chapters" | "log" | "loading" | "error";
+export type ViewPage = "title" | "guide" | "brief" | "battle" | "result" | "help" | "ending" | "chapters" | "log" | "loading" | "error";
 export type TacticsPresentation = {
   page: ViewPage; s: Battle; selected?: Unit; cursor: Point; action: Action | "move"; tick: number;
   reducedMotion: boolean; pendingTurn: boolean; pendingTarget: string | null; confirmEnd: boolean; confirmRetry: boolean;
@@ -53,7 +53,7 @@ export class TacticsView {
     this.ui.add({ id, x, y, w, h, label, disabled, activate: () => this.commands.command(id, value) });
   }
   private header(title: string, right: string) {
-    this.p.rect(0, 0, 640, 23, "black"); this.text(title, 10, 4, "white", 2); this.text(right, 630 - right.length * 6, 8, "white"); this.p.rect(0, 22, 640, 1, "pink");
+    this.p.rect(0, 0, 640, 23, "black"); this.text(title, 10, 4, "white", 2); this.text(right, 540 - right.length * 6, 8, "white"); this.p.rect(0, 22, 640, 1, "pink");
   }
   private sprite(role: Role, x: number, y: number, size: number) { this.art.draw(this.p.ctx, "character", CHARACTER_CELL[role], x, y, size); }
   private fieldSprite(unit: Unit, commander: Friend, x: number, y: number, size: number) {
@@ -119,12 +119,12 @@ export class TacticsView {
     // A small settlement gives the road a destination instead of a blank battlefield backdrop.
     this.scenery(SCENERY.cottage, 465, 94, 72); this.scenery(SCENERY.cottage, 531, 149, 62); this.scenery(SCENERY.tower, 470, 193, 96);
     this.box(24, 28, 397, 136); this.text("A RARE FRIENDS TACTICAL ADVENTURE", 43, 46);
-    this.text("REAL FRENEMIES", 43, 66, "black", 3); this.text("THE LANTERN ROAD", 43, 106, "black", 2); this.text("THREE FRIENDS. ONE LAST LIGHT.", 43, 143, "pink");
+    this.text("REAL FRENEMIES", 43, 66, "black", 3); this.text("BUILD. RAID. DEFEND.", 43, 106, "black", 2); this.text("YOUR FRIENDS. YOUR NEXT MOVE.", 43, 143, "pink");
     this.sprite("ranger", 170, 208, 118); this.sprite("mender", 354, 214, 108); this.sprite("warden", 257, 184, 142);
     this.box(20, 344, 598, 125); this.center("A SMALL WORLD. A BETTER PLAN.", 320, 358);
-    this.button("start", "START CAMPAIGN", 40, 380, 336, 36, true); this.button("guide", "FIELD GUIDE", 390, 380, 208, 36);
-    if (v.unlocked) this.button("chapters", "CHAPTER SELECT", 40, 431, 230, 22); else this.text("4 CHAPTERS / EVERY MOVE MATTERS", 40, 440, "pink");
-    this.button("legacy", "TERRITORY MODE", 390, 431, 208, 22);
+    this.button("battle-mode", "PVP BATTLE", 40, 380, 336, 36, true); this.button("campaign-mode", "CAMPAIGN", 390, 380, 208, 36);
+    this.text("BUILD / RAID / DEFEND", 40, 440, "pink");
+    this.button("main-guide", "GUIDE", 390, 431, 208, 22);
   }
   private brief(v: TacticsPresentation) {
     const p = this.p, m = MISSIONS[v.s.mission], story = BRIEFS[v.s.mission]; this.map(v.s, 0, 24, 54);
@@ -214,6 +214,18 @@ export class TacticsView {
     this.button("chapters", "C CHAPTER SELECT", 216, 340, 208, 26);
     this.dialogue(won ? "mender" : "warden", won ? "One more light along the road. We did that together." : "It's not over. We'll find a better way.", "BEST MEDALS ARE KEPT FOR THIS SESSION");
   }
+  private guide() {
+    this.header("GUIDE", "HOW TO PLAY");
+    this.box(18, 40, 602, 165); this.text("01 / PVP BATTLE", 36, 58, "black", 2);
+    this.lines("Build a home for your Friends. Recruit defenders, scout a rival, then choose up to four raiders and their route. Hold your ground at night and expand your territory.", 36, 87, 560, 2, "black", 4);
+    this.text("CURRENT PREVIEW: SIMULATED RIVALS AND BALANCES.", 36, 180, "pink");
+    this.box(18, 219, 602, 139); this.text("02 / CAMPAIGN", 36, 237, "black", 2);
+    this.lines("The Lantern Road. Three Friends, four story chapters. Move, attack and use skills to outwit enemies whose next strikes are marked on the map.", 36, 266, 560, 2, "black", 4);
+    this.button("guide", "CAMPAIGN RULES", 36, 378, 270, 30);
+    this.button("battle-mode", "BATTLE / H FOR RULES", 325, 378, 279, 30);
+    this.center("MAIN MENU / HOME KEY RETURNS WITHOUT RESETTING PROGRESS", 320, 433);
+    this.center("H FOR HELP IN EITHER MODE / TAB AND ENTER SELECT", 320, 451);
+  }
   private help(v: TacticsPresentation) {
     this.header("FIELD GUIDE", "H / ESC TO RETURN"); this.box(13, 36, 612, 333);
     const entries = [
@@ -231,7 +243,7 @@ export class TacticsView {
     this.header("THE LANTERN ROAD", `${v.scores.flat().filter(Boolean).length}/12 MEDALS`); this.map(v.s, 0, 25, 54);
     this.box(28, 43, 582, 324); this.text("REVISIT A CHAPTER. KEEP YOUR BEST MEDALS.", 48, 62);
     MISSIONS.forEach((m, i) => { this.button(`chapter${i}`, `${i + 1} / ${m.name}`, 48, 93 + i * 63, 410, 42, i === v.chapterPick, i > v.unlocked, i); this.text(i > v.unlocked ? "LOCKED" : `${v.scores[i]?.filter(Boolean).length ?? 0}/3 MEDALS`, 486, 110 + i * 63, "pink"); });
-    this.button("title", "BACK TO TITLE", 28, 397, 190, 32); this.text("ARROWS CHOOSE / ENTER DEPLOYS", 255, 409);
+    this.button("title", "MAIN MENU", 28, 397, 190, 32); this.text("ARROWS CHOOSE / ENTER DEPLOYS", 255, 409);
   }
   private report(v: TacticsPresentation) {
     this.header("LAST ENEMY TURN", "L / ESC TO RETURN"); this.box(14, 38, 608, 342);
@@ -245,6 +257,7 @@ export class TacticsView {
     this.p.rect(0, 0, 640, 480, "white"); this.ui.begin();
     switch (v.page) {
       case "title": this.title(v); break;
+      case "guide": this.guide(); break;
       case "brief": this.brief(v); break;
       case "battle": this.battle(v); break;
       case "result": this.result(v); break;
@@ -255,6 +268,8 @@ export class TacticsView {
       default: this.center(v.page === "error" ? "SIGNAL LOST" : "WAKING THE FOREST", 320, 204, "black", 2); if (v.page === "error") this.button("retry-load", "RETRY", 230, 257, 180, 35); break;
     }
     if (v.page === "title") { this.box(467, 8, 163, 28); this.text(`BANNER #${v.commander.tokenId}`, 476, 18); this.p.sprite(spriteBits(v.commander, "down", false, 0), 606, 13, "black"); }
-    this.ui.settle();
+    if (v.page !== "title") this.button("main-menu", "MAIN MENU", 550, 2, 82, 18);
+    this.ui.settle(v.page === "title" ? "battle-mode" : undefined);
+    this.p.ctx.canvas.dataset.controls = JSON.stringify(this.ui.widgets.map(({ id, x, y, w, h, disabled }) => ({ id, x, y, w, h, disabled })));
   }
 }

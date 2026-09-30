@@ -68,20 +68,20 @@ try {
     assert.equal(state.logs.length, 32, "Both directions cover 76 million blocks in bounded windows");
     assert(state.logs.every(([from, to]) => to - from < 5_000_000n));
     await page.getByRole("button", { name: /Friend #7730/ }).click(); await shot("ready");
-    await page.getByRole("button", { name: "Start adventure" }).click();
-    const game = page.frameLocator("iframe"); await game.getByRole("status").filter({ hasText: "The Lantern Road" }).waitFor();
+    await page.getByRole("button", { name: "Enter game" }).click();
+    const game = page.frameLocator("iframe"); await game.getByRole("status").filter({ hasText: "Main menu:" }).waitFor();
     assert.equal(await page.locator("iframe").getAttribute("sandbox"), "allow-scripts");
     assert.equal(await game.locator("body").evaluate(() => { try { return Boolean(parent.document); } catch { return false; } }), false);
     assert(state.ownerReads >= 2, "Selected Friend receives fresh SDK ownership verification"); await shot("play");
-    await game.getByRole("button", { name: "Territory mode (resets campaign)" }).focus();
+    await game.getByRole("toolbar", { name: "Game settings" }).getByRole("button", { name: "PvP Battle", exact: true }).focus();
     await page.keyboard.press("Enter");
     await game.getByRole("status").filter({ hasText: "Base loaded" }).waitFor();
     const canvas = game.locator("canvas");
     assert.deepEqual(await canvas.evaluate(c => [c.width, c.height]), [640, 480]);
-    await canvas.focus(); await page.keyboard.press("Escape");
+    await canvas.focus();
     await page.waitForTimeout(100); await shot("versus");
     if (width === 360) {
-      const deck = game.getByLabel("Versus command deck"), bounds = await deck.boundingBox(), gameBounds = await game.locator(".rf-game").boundingBox();
+      const deck = game.getByLabel("Battle command deck"), bounds = await deck.boundingBox(), gameBounds = await game.locator(".rf-game").boundingBox();
       assert(bounds.y + bounds.height <= gameBounds.y + gameBounds.height, "Versus touch controls fit inside game");
       assert((await deck.getByRole("button", { name: "Raid", exact: true }).boundingBox()).height >= 44);
       await deck.getByRole("button", { name: "Help", exact: true }).click();
@@ -89,9 +89,9 @@ try {
       await deck.getByRole("button", { name: "Back", exact: true }).click();
       await deck.getByRole("button", { name: "Raid", exact: true }).waitFor();
     }
-    await game.getByRole("button", { name: "Campaign mode (resets territory)" }).focus();
+    await game.getByRole("toolbar", { name: "Game settings" }).getByRole("button", { name: "Main menu", exact: true }).focus();
     await page.keyboard.press("Enter");
-    await game.getByRole("status").filter({ hasText: "The Lantern Road" }).waitFor();
+    await game.getByRole("status").filter({ hasText: "Main menu:" }).waitFor();
     await page.evaluate(other => window.walletTest.accounts([other]), OTHER);
     await page.locator("iframe").waitFor({ state: "detached" });
     await page.getByRole("alert").filter({ hasText: "couldn't finish" }).waitFor();
@@ -102,9 +102,9 @@ try {
     await page.getByText("Know your Friend number?").click(); await page.getByLabel("Friend number", { exact: true }).fill("7730");
     state.staleOwner = true; await page.getByRole("button", { name: "Find Friend", exact: true }).click();
     await page.getByRole("alert").filter({ hasText: "different wallet" }).waitFor();
-    assert.equal(await page.getByRole("button", { name: "Start adventure" }).count(), 0);
+    assert.equal(await page.getByRole("button", { name: "Enter game" }).count(), 0);
     state.staleOwner = false; await page.getByRole("button", { name: "Find Friend", exact: true }).click();
-    await page.getByRole("button", { name: "Start adventure" }).waitFor(); await shot("manual-recovery");
+    await page.getByRole("button", { name: "Enter game" }).waitFor(); await shot("manual-recovery");
     state.failure = false; state.empty = true; await page.getByRole("button", { name: "Retry loading Friends" }).click();
     await page.getByText(/No Rare Friends were found/).waitFor(); await shot("empty");
     await page.evaluate(() => window.walletTest.chain("0x1"));

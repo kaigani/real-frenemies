@@ -10,12 +10,12 @@ try {
   for (const [width, dpr] of [[1280, 1], [1280, 1.25], [1280, 1.5], [1280, 2], [960, 1], [360, 1], [360, 2], [360, 3]]) {
     const page = await browser.newPage({ viewport: { width, height: 1100 }, deviceScaleFactor: dpr, reducedMotion: "reduce" });
     await page.goto(process.env.DEMO_URL ?? "http://localhost:4174");
-    await page.getByRole("status").filter({ hasText: "The Lantern Road" }).waitFor();
-    await page.getByRole("button", { name: "Territory mode (resets campaign)" }).focus();
+    await page.getByRole("status").filter({ hasText: "Main menu:" }).waitFor();
+    await page.getByRole("toolbar", { name: "Game settings" }).getByRole("button", { name: "PvP Battle", exact: true }).focus();
     await page.keyboard.press("Enter");
     await page.getByRole("status").filter({ hasText: "Base loaded" }).waitFor();
     const canvas = page.locator(".rf-game canvas");
-    await canvas.focus(); await page.keyboard.press("Escape");
+    await canvas.focus();
     await page.waitForTimeout(100);
     // The inspector must use the actual campaign glyphs, with no resampling or substitute font.
     const expected = [..."READING / PLAIN"].map(bigGlyph);
@@ -29,7 +29,7 @@ try {
     assert(matches, "Versus body text must match the campaign 5x7 font exactly");
     const bounds = await canvas.boundingBox(), pixelSize = bounds.width * dpr / 640;
     if (pixelSize < .999) {
-      await page.getByLabel("Versus command deck").getByRole("button", { name: "Raid", exact: true }).waitFor();
+      await page.getByLabel("Battle command deck").getByRole("button", { name: "Raid", exact: true }).waitFor();
       await page.screenshot({ path: `artifacts/pixels/${width}-${dpr}.png`, scale: "device" });
       await page.close(); console.log(`PASS campaign font / compact overview and touch controls: ${width}px / DPR ${dpr}`); continue;
     }

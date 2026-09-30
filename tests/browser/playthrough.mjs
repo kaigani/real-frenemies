@@ -22,7 +22,10 @@ await testGame("./game", {
     let scale = 1;
     const click = id => control(canvas, id);
     const status = game.locator("[role=status]");
-    const shot = async name => { await page.waitForTimeout(150); await page.locator(".rf-game-frame").screenshot({ path: `${out}/${name}.png` }); };
+    const shot = async name => { await page.waitForTimeout(150); await page.locator(".rf-game-frame").screenshot({ path: `${out}/${name}.png` });
+      const before = await canvas.evaluate(c => JSON.parse(c.dataset.controls).map(w => w.id));
+      await control(canvas, "main-menu"); await control(canvas, "battle-mode"); await page.waitForTimeout(40);
+      assert.deepEqual(await canvas.evaluate(c => JSON.parse(c.dataset.controls).map(w => w.id)), before, name + ": main menu preserves this battle screen"); };
     const tap = async (x, y) => canvas.click({ position: { x: (x + 0.5) * scale, y: (y + 0.5) * scale } });
     const until = async (text, ms = 20_000) => status.filter({ hasText: text }).waitFor({ timeout: ms });
 
@@ -37,8 +40,8 @@ await testGame("./game", {
       assert.deepEqual(await canvas.evaluate(c => [c.width, c.height]), [640, 480]);
     };
 
-    await until("The Lantern Road");
-    await game.getByRole("button", { name: "Territory mode (resets campaign)" }).focus();
+    await until("Main menu:");
+    await game.getByRole("toolbar", { name: "Game settings" }).getByRole("button", { name: "PvP Battle", exact: true }).focus();
     await page.keyboard.press("Enter");
     await until("Base loaded");
     scale = (await canvas.boundingBox()).width / 320;
@@ -46,7 +49,7 @@ await testGame("./game", {
     await canvas.focus();
     await shot("01-help");
     await pixelCheck("help");
-    await click("close"); // START BUILDING
+
     // Recruit three Friends from the pool strip and place them on the home board.
     const place = async (index, tx, ty) => { await tap(6 + index * 20 + 8, 185); await tap(4 + tx * 20 + 10, 12 + ty * 20 + 10); };
     await place(0, 6, 2); await until("Placed");
